@@ -1,28 +1,351 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// Comunidade Segura - Database Schema
+// Full schema covering all 6 modules
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO 6: CONTROLE DE ACESSO - Users & Roles
+// ═══════════════════════════════════════════════════════════════
+
+model Usuario {
+  id            Int      @id @default(autoincrement())
+  nomeCompleto  String
+  pseudonimo    String   @unique
+  email         String   @unique
+  senhaHash     String
+  fotoPerfil    String?
+  miniBio       String?  // max 160 chars
+  role          String   @default("MEMBRO") // VISITANTE, MEMBRO, MODERADOR, ADMIN, ORGAO_SEGURANCA
+  pontuacao     Int      @default(0)
+  nivel         String   @default("Iniciante") // Iniciante, Colaborador, Sentinela, Guardião
+  status        String   @default("ATIVO") // ATIVO, BANIDO, SUSPENSO, PENDENTE
+  aceitouTermos Boolean  @default(false)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  deviceFingerprint String?
+  
+  senhasAnteriores String? // JSON array of last 3 password hashes
+  tentativasLogin  Int    @default(0)
+  bloqueadoAte     DateTime?
+  
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+  deletadoEm   DateTime?
+
+  // Relations
+  incidentes     Incidente[]
+  eventos        Evento[]
+  votos          Voto[]
+  sessoes        Sessao[]
+  zonasInteresse ZonaInteresse[]
+  notificacoes   Notificacao[]
+  logReputacao   LogReputacao[]
+  denuncias      Denuncia[]       @relation("denunciante")
+  moderacoes     Moderacao[]      @relation("moderador")
+  logAuditoria   LogAuditoria[]
+  medalhas       MedalhaUsuario[]
+
+  @@index([email])
+  @@index([pseudonimo])
+  @@index([status])
+}
+
+model Sessao {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int
+  token      String   @unique
+  deviceInfo String?  // User Agent
+  ipOrigem   String?
+  ativo      Boolean  @default(true)
+  criadoEm   DateTime @default(now())
+  expiraEm   DateTime
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([token])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO 1 & 2: INCIDENTES E EVENTOS
+// ═══════════════════════════════════════════════════════════════
 
 model Incidente {
   id          Int      @id @default(autoincrement())
   titulo      String
   descricao   String?
-  categoria   String
-  severidade  String   // 'BAIXA', 'MEDIA', 'ALTA', 'CRITICA'
-  status      String   @default("ativo")
+  categoria   String   // Assalto, Furto, Iluminação, etc.
+  tipo        String   @default("WARNING") // CRITICAL, WARNING
+  severidade  String   // BAIXA, MEDIA, ALTA, CRITICA
+  status      String   @default("ativo") // ativo, resolvido, expirado, moderacao, arquivado
   latitude    Float
   longitude   Float
-  criadoEm    DateTime @default(now())
+  endereco    String?  // Reverse geocoded address
+  
+  // Veracidade
+  scoreVeracidade Int @default(0)
+  verificado     Boolean @default(false)
+  
+  // Author
+  autorId     Int
+  autor       Usuario  @relation(fields: [autorId], references: [id])
+  
+  // Audit
+  ipOrigem    String?
+  deviceInfo  String?
+  
+  criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
+  deletadoEm   DateTime?
+
+  // Relations
+  votos       Voto[]
+  midias      Midia[]
+  denuncias   Denuncia[]
+
+  @@index([latitude, longitude])
+  @@index([autorId])
+  @@index([categoria])
+  @@index([status])
+  @@index([criadoEm])
+  @@index([autorId, criadoEm])
+}
+
+model Evento {
+  id            Int      @id @default(autoincrement())
+  titulo        String
+  descricao     String?
+  categoriaEvento String // Feira, Reunião, Mutirão, Esportivo
+  latitude      Float
+  longitude     Float
+  endereco      String?
+  
+  dataEvento    DateTime
+  horaInicio    String
+  horaFim       String
+  
+  necessitaVoluntarios Boolean @default(false)
+  capacidadeMax        Int?
+  linkExterno          String?
+  
+  status        String   @default("ativo") // ativo, encerrado, cancelado
+  
+  autorId       Int
+  autor         Usuario  @relation(fields: [autorId], references: [id])
+  
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+  deletadoEm    DateTime?
+  
+  rsvps         Rsvp[]
+  midias        Midia[]
+
+  @@index([latitude, longitude])
+  @@index([autorId])
+  @@index([dataEvento])
+  @@index([status])
+}
+
+model Rsvp {
+  id        Int    @id @default(autoincrement())
+  eventoId  Int
+  usuarioId Int
+  tipo      String @default("EU_VOU") // EU_VOU, QUERO_AJUDAR
+  criadoEm  DateTime @default(now())
+
+  evento Evento @relation(fields: [eventoId], references: [id])
+  
+  @@unique([eventoId, usuarioId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO 2: VERACIDADE E EVIDÊNCIAS
+// ═══════════════════════════════════════════════════════════════
+
+model Voto {
+  id           Int      @id @default(autoincrement())
+  incidenteId  Int
+  usuarioId    Int
+  tipo         String   // CONFIRMAR, NAO_PROCEDE
+  latitude     Float?   // GPS position when voting (audit)
+  longitude    Float?
+  criadoEm     DateTime @default(now())
+
+  incidente Incidente @relation(fields: [incidenteId], references: [id])
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+
+  @@unique([incidenteId, usuarioId])
+  @@index([incidenteId])
+  @@index([usuarioId])
+}
+
+model Midia {
+  id           Int      @id @default(autoincrement())
+  incidenteId  Int?
+  eventoId     Int?
+  nomeArquivo  String
+  tipoArquivo  String   // image/jpeg, image/png, video/mp4
+  tamanho      Int      // bytes
+  url          String
+  thumbnailUrl String?
+  criadoEm     DateTime @default(now())
+  deletadoEm   DateTime?
+
+  incidente Incidente? @relation(fields: [incidenteId], references: [id])
+  evento    Evento?    @relation(fields: [eventoId], references: [id])
+
+  @@index([incidenteId])
+  @@index([eventoId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO 3: ALERTAS E NOTIFICAÇÕES
+// ═══════════════════════════════════════════════════════════════
+
+model ZonaInteresse {
+  id         Int    @id @default(autoincrement())
+  usuarioId  Int
+  nome       String // ex: "Minha Casa"
+  latitude   Float
+  longitude  Float
+  raio       Int    @default(500) // meters (500 - 5000)
+  ativo      Boolean @default(true)
+  criadoEm   DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([latitude, longitude])
+}
+
+model Notificacao {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int
+  titulo     String
+  corpo      String
+  tipo       String   // PUSH_PROXIMIDADE, ZONA_INTERESSE, SISTEMA, MODERACAO
+  lida       Boolean  @default(false)
+  incidenteId Int?
+  criadoEm   DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([criadoEm])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO 4: GAMIFICAÇÃO
+// ═══════════════════════════════════════════════════════════════
+
+model LogReputacao {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int
+  pontos     Int      // +10, -5, etc
+  motivo     String   // RELATO_CRIADO, CONFIRMACAO, FALSO_RELATO, etc
+  referenciaId Int?   // ID of related entity  
+  criadoEm   DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([criadoEm])
+  @@index([usuarioId, criadoEm])
+}
+
+model Medalha {
+  id        Int    @id @default(autoincrement())
+  codigo    String @unique // PRIMEIRO_RELATO, VIGILANTE_MES, etc
+  nome      String
+  descricao String
+  icone     String // emoji or icon name
+
+  usuarios MedalhaUsuario[]
+}
+
+model MedalhaUsuario {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int
+  medalhaId Int
+  criadoEm  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  medalha Medalha @relation(fields: [medalhaId], references: [id])
+
+  @@unique([usuarioId, medalhaId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO 5: MODERAÇÃO E AUDITORIA
+// ═══════════════════════════════════════════════════════════════
+
+model Denuncia {
+  id           Int      @id @default(autoincrement())
+  incidenteId  Int
+  denuncianteId Int
+  motivo       String
+  status       String   @default("PENDENTE") // PENDENTE, APROVADA, REJEITADA
+  criadoEm     DateTime @default(now())
+
+  incidente   Incidente @relation(fields: [incidenteId], references: [id])
+  denunciante Usuario   @relation("denunciante", fields: [denuncianteId], references: [id])
+
+  @@index([incidenteId])
+  @@index([status])
+}
+
+model Moderacao {
+  id            Int      @id @default(autoincrement())
+  moderadorId   Int
+  acao          String   // APROVAR, RECUSAR, BANIR, QUARENTENA
+  justificativa String   // min 30 chars
+  entidadeTipo  String   // INCIDENTE, EVENTO, USUARIO
+  entidadeId    Int
+  criadoEm      DateTime @default(now())
+
+  moderador Usuario @relation("moderador", fields: [moderadorId], references: [id])
+
+  @@index([moderadorId])
+  @@index([entidadeTipo, entidadeId])
+}
+
+model LogAuditoria {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int?
+  nomeUsuario String?
+  acao       String   // LOGIN, LOGOUT, CRIAR, EDITAR, DELETAR, BANIR, etc
+  modulo     String   // INCIDENTE, EVENTO, USUARIO, AUTH, etc
+  detalhes   String?  // JSON payload with before/after
+  ipOrigem   String?
+  userAgent  String?
+  criadoEm   DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([acao])
+  @@index([modulo])
+  @@index([criadoEm])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MÓDULO 6: PERMISSÕES
+// ═══════════════════════════════════════════════════════════════
+
+model PerfilPermissao {
+  id       Int    @id @default(autoincrement())
+  perfil   String // MEMBRO, MODERADOR, ADMIN, ORGAO_SEGURANCA
+  recurso  String // INCIDENTE, EVENTO, USUARIO, DASHBOARD, etc
+  acao     String // CRIAR, LER, EDITAR, DELETAR, MODERAR, BANIR
+  permitido Boolean @default(false)
+
+  @@unique([perfil, recurso, acao])
+  @@index([perfil])
 }
