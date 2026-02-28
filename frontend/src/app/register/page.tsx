@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/contexts/ToastContext';
+import { useAuth } from '@/features/auth/AuthContext';
+import { useToast } from '@/shared/lib/toastStore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, User, Mail, Lock, Eye, EyeOff, FileCheck, ArrowRight } from 'lucide-react';

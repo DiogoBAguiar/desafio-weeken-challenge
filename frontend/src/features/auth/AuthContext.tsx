@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import api from '@/services/api';
+import api from '@/shared/lib/api';
 
 interface Usuario {
     id: number;

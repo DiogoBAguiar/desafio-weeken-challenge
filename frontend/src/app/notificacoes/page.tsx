@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/contexts/ToastContext';
+import { useAuth } from '@/features/auth/AuthContext';
+import { useToast } from '@/shared/lib/toastStore';
 import { useRouter } from 'next/navigation';
-import api from '@/services/api';
+import api from '@/shared/lib/api';
 import {
     Bell, BellOff, CheckCheck, MapPin, Trash2, Plus,
     ToggleLeft, ToggleRight, Navigation

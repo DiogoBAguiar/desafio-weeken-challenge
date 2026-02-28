@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ToastProvider } from "@/contexts/ToastContext";
-import Sidebar from "@/components/Sidebar/Sidebar";
+import { AuthProvider } from "@/features/auth/AuthContext";
+import { ToastContainer } from "@/shared/components/Toast/ToastContainer";
+import Sidebar from "@/shared/components/Sidebar/Sidebar";
+import { QueryProvider } from "@/shared/lib/QueryProvider";
 
 export const metadata: Metadata = {
   title: "Comunidade Segura - Mapeamento colaborativo de segurança",
@@ -20,14 +22,16 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body>
-        <AuthProvider>
-          <ToastProvider>
+        <QueryProvider>
+          <AuthProvider>
             <Sidebar />
             {children}
-          </ToastProvider>
-        </AuthProvider>
+            <ToastContainer />
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/contexts/ToastContext';
+import { useAuth } from '@/features/auth/AuthContext';
+import { useToast } from '@/shared/lib/toastStore';
 import { useRouter, useSearchParams } from 'next/navigation';
-import api from '@/services/api';
+import api from '@/shared/lib/api';
 import {
     User, Award, FileText, Trophy, Shield, Settings,
     ChevronRight, Calendar, TrendingUp, Star, Edit3, Save,

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/contexts/ToastContext';
+import { useAuth } from '@/features/auth/AuthContext';
+import { useToast } from '@/shared/lib/toastStore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
@@ -39,7 +39,7 @@ export default function LoginPage() {
     const handleForgot = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const { default: api } = await import('@/services/api');
+            const { default: api } = await import('@/shared/lib/api');
             await api.forgotPassword(forgotEmail);
             showToast('Se o e-mail estiver cadastrado, você receberá as instruções.', 'info');
             setShowForgot(false);

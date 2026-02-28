@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/features/auth/AuthContext';
 import {
     Map, LogIn, LogOut, User, Bell, Shield, BarChart3,
     Award, ChevronLeft, ChevronRight, Home, FileText,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import api from '@/services/api';
+import api from '@/shared/lib/api';
 
 export default function Sidebar() {
     const { usuario, isAuthenticated, logout } = useAuth();

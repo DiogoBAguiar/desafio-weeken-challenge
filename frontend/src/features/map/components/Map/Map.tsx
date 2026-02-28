@@ -20,10 +20,11 @@ import {
     Flag, Plus, WifiOff, Sun, Moon, ChevronDown, ChevronUp
 } from "lucide-react";
 import styles from "./Map.module.css";
-import IncidentModal from "../IncidentModal/IncidentModal";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/contexts/ToastContext";
-import api from "@/services/api";
+import IncidentModal from "@/features/incidents/components/IncidentModal/IncidentModal";
+import { useAuth } from "@/features/auth/AuthContext";
+import { useToast } from "@/shared/lib/toastStore";
+import { useMapStore } from "@/features/map/store/useMapStore";
+import { useMapIncidents, useHeatmapData, useVoteIncident, useReportIncident, useCreateIncident } from "@/features/map/api/useMapData";
 
 export type CategoryType = "CRITICAL" | "WARNING" | "EVENT";
 
@@ -92,9 +93,8 @@ export default function AppMap() {
     const { usuario, isAuthenticated } = useAuth();
     const { showToast } = useToast();
 
-    const [incidents, setIncidents] = useState<any[]>([]);
-    const [events, setEvents] = useState<any[]>([]);
-    const [heatPoints, setHeatPoints] = useState<[number, number, number][]>([]);
+    const { filters, setFilter, showHeatmap, setShowHeatmap, isDarkMode, setIsDarkMode, showLegend, setShowLegend } = useMapStore();
+    const [bounds, setBounds] = useState<any>(null);
 
     // CA11 (1.3.2): Read URL params for zone centering
     const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -114,33 +114,35 @@ export default function AppMap() {
     const [clickedLocation, setClickedLocation] = useState<[number, number] | null>(null);
 
     const [showFiltersMenu, setShowFiltersMenu] = useState(false);
-    const [showHeatmap, setShowHeatmap] = useState(false);
-    const [showLegend, setShowLegend] = useState(true);
     const [heatmapOpacity, setHeatmapOpacity] = useState(0.6);
-    const [isDarkMode, setIsDarkMode] = useState(false);
-    const [filters, setFilters] = useState<Record<CategoryType, boolean>>({
-        CRITICAL: true,
-        WARNING: true,
-        EVENT: false,
-    });
 
-    const boundsRef = useRef<any>(null);
+    // React Query Hooks
+    const { data: rawIncidents = [], isFetching } = useMapIncidents(bounds, isOnline);
+    const { data: heatPoints = [] } = useHeatmapData(bounds, showHeatmap, isOnline);
+    const voteMutation = useVoteIncident();
+    const reportMutation = useReportIncident();
+    const createMutation = useCreateIncident();
 
-    // Auto detect dark mode
-    useEffect(() => {
-        const hour = new Date().getHours();
-        setIsDarkMode(hour < 6 || hour >= 18);
-    }, []);
+    const incidents = rawIncidents || [];
+    const events = incidents.filter((i: any) => (i.tipo || i.type) === "EVENT");
 
-    // Persist filters
+    // Persist filters & Heatmap sync
     const [isMounted, setIsMounted] = useState(false);
     useEffect(() => {
         setIsMounted(true);
+        // Load initially
         const saved = localStorage.getItem("cs_filters");
-        if (saved) try { setFilters(JSON.parse(saved)); } catch { }
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setFilter('CRITICAL', parsed.CRITICAL);
+                setFilter('WARNING', parsed.WARNING);
+                setFilter('EVENT', parsed.EVENT);
+            } catch { }
+        }
         const savedHm = localStorage.getItem("cs_heatmap");
         if (savedHm === "true") setShowHeatmap(true);
-    }, []);
+    }, [setFilter, setShowHeatmap]);
 
     useEffect(() => {
         if (isMounted) {
@@ -151,54 +153,25 @@ export default function AppMap() {
         if (filters.EVENT && !filters.CRITICAL && !filters.WARNING) {
             setShowHeatmap(false);
         }
-    }, [filters, showHeatmap, isMounted]);
+    }, [filters, showHeatmap, isMounted, setShowHeatmap]);
 
     // Online/Offline detection
     useEffect(() => {
-        const onOnline = () => { setIsOnline(true); showToast("Conexão restaurada", "success"); loadMapData(); };
+        const onOnline = () => { setIsOnline(true); showToast("Conexão restaurada", "success"); };
         const onOffline = () => { setIsOnline(false); };
         window.addEventListener("online", onOnline);
         window.addEventListener("offline", onOffline);
         setIsOnline(navigator.onLine);
         return () => { window.removeEventListener("online", onOnline); window.removeEventListener("offline", onOffline); };
-    }, []);
+    }, [showToast]);
 
-    // Load data from API
-    const loadMapData = useCallback(async () => {
-        if (!boundsRef.current || !isOnline) return;
-        try {
-            const bounds = boundsRef.current;
-            const [mapData, heatData] = await Promise.all([
-                api.getMapData(bounds),
-                showHeatmap ? api.getHeatmap(bounds) : Promise.resolve([]),
-            ]);
-
-            setIncidents(mapData || []);
-            setHeatPoints(heatData || []);
-
-            // Cache for offline
-            if (typeof window !== "undefined") {
-                localStorage.setItem("cs_cache_incidents", JSON.stringify(mapData));
-                localStorage.setItem("cs_cache_heat", JSON.stringify(heatData));
-            }
-        } catch {
-            // Fallback to cache
-            const cached = localStorage.getItem("cs_cache_incidents");
-            if (cached) setIncidents(JSON.parse(cached));
-            const cachedHeat = localStorage.getItem("cs_cache_heat");
-            if (cachedHeat) setHeatPoints(JSON.parse(cachedHeat));
-        }
-    }, [isOnline, showHeatmap]);
-
-    // Load on mount
     useEffect(() => {
         // Set initial bounds
-        boundsRef.current = {
+        setBounds({
             minLat: -7.16, maxLat: -7.07,
             minLng: -34.92, maxLng: -34.80,
-        };
-        loadMapData();
-    }, [loadMapData]);
+        });
+    }, []);
 
     const handleLocateMe = () => {
         setIsLocating(true);
@@ -241,13 +214,12 @@ export default function AppMap() {
             },
             moveend() {
                 const b = map.getBounds();
-                boundsRef.current = {
+                setBounds({
                     minLat: b.getSouth(),
                     maxLat: b.getNorth(),
                     minLng: b.getWest(),
                     maxLng: b.getEast(),
-                };
-                loadMapData();
+                });
             },
             // CA12 (1.1.4): Disable auto-tracking when user drags map manually
             dragstart() {
@@ -258,50 +230,36 @@ export default function AppMap() {
     };
 
     const handleIncidentSubmit = async (data: any) => {
-        try {
-            const result = await api.createIncident({
-                titulo: data.category || "Novo Incidente",
-                descricao: data.description,
-                categoria: data.category,
-                tipo: data.type,
-                latitude: data.lat,
-                longitude: data.lng,
-            });
-            showToast(result.mensagem, "success", result.pontosGanhos);
-            loadMapData();
-        } catch (err: any) {
-            showToast(err.message, "error");
-        }
+        createMutation.mutate({
+            titulo: data.category || "Novo Incidente",
+            descricao: data.description,
+            categoria: data.category,
+            tipo: data.type,
+            latitude: data.lat,
+            longitude: data.lng,
+        }, {
+            onSuccess: (result: any) => {
+                showToast(result.mensagem || "Incidente criado", "success");
+            },
+            onError: (err: any) => showToast(err.message, "error")
+        });
     };
 
-    const handleVote = async (incidenteId: number, tipo: string) => {
-        if (!isAuthenticated) {
-            showToast("Faça login para votar", "warning");
-            return;
-        }
-        try {
-            const result = await api.voteIncident(
-                incidenteId,
-                tipo,
-                userPos?.[0],
-                userPos?.[1]
-            );
-            showToast(result.mensagem, "success");
-            loadMapData();
-        } catch (err: any) {
-            showToast(err.message, "error");
-        }
+    const handleVote = (incidenteId: number, tipo: string) => {
+        if (!isAuthenticated) return showToast("Faça login para votar", "warning");
+        voteMutation.mutate({ id: incidenteId, type: tipo, lat: userPos?.[0], lng: userPos?.[1] }, {
+            onSuccess: (res: any) => showToast(res.mensagem || "Voto computado", "success"),
+            onError: (err: any) => showToast(err.message, "error")
+        });
     };
 
-    const handleReport = async (incidenteId: number) => {
+    const handleReport = (incidenteId: number) => {
         const motivo = prompt("Descreva por que está denunciando (mín. 10 caracteres):");
         if (!motivo || motivo.length < 10) return;
-        try {
-            await api.reportIncident(incidenteId, motivo);
-            showToast("Denúncia registrada. Obrigado!", "success");
-        } catch (err: any) {
-            showToast(err.message, "error");
-        }
+        reportMutation.mutate({ id: incidenteId, motivo }, {
+            onSuccess: () => showToast("Denúncia registrada. Obrigado!", "success"),
+            onError: (err: any) => showToast(err.message, "error")
+        });
     };
 
     const createClusterCustomIcon = (cluster: any) => {
@@ -313,7 +271,7 @@ export default function AppMap() {
         });
     };
 
-    const filteredIncidents = incidents.filter((inc) => {
+    const filteredIncidents = incidents.filter((inc: any) => {
         const type = inc.tipo || inc.type;
         if (type === "CRITICAL" && !filters.CRITICAL) return false;
         if (type === "WARNING" && !filters.WARNING) return false;
@@ -324,8 +282,8 @@ export default function AppMap() {
     const allFiltersOff = !filters.CRITICAL && !filters.WARNING && !filters.EVENT;
 
     const categoryCount = {
-        CRITICAL: incidents.filter(i => (i.tipo || i.type) === "CRITICAL").length,
-        WARNING: incidents.filter(i => (i.tipo || i.type) === "WARNING").length,
+        CRITICAL: incidents.filter((i: any) => (i.tipo || i.type) === "CRITICAL").length,
+        WARNING: incidents.filter((i: any) => (i.tipo || i.type) === "WARNING").length,
         EVENT: events.length,
     };
 
@@ -344,6 +302,13 @@ export default function AppMap() {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url={isDarkMode ? NIGHT_TILES : DAY_TILES}
                 />
+
+                {isFetching && (
+                    <div style={{ position: 'absolute', top: 20, left: 20, zIndex: 1000, background: 'var(--bg-surface)', padding: '6px 12px', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid var(--glass-border)', boxShadow: 'var(--shadow-md)' }}>
+                        <div style={{ width: 12, height: 12, borderRadius: '50%', border: '2px solid var(--primary-color)', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
+                        Sincronizando...
+                    </div>
+                )}
 
                 <ZoomControl position="bottomright" />
 
@@ -370,7 +335,7 @@ export default function AppMap() {
                     iconCreateFunction={createClusterCustomIcon}
                     maxClusterRadius={50}
                 >
-                    {filteredIncidents.map((incident) => (
+                    {filteredIncidents.map((incident: any) => (
                         <Marker
                             key={incident.id}
                             position={[incident.latitude || incident.lat, incident.longitude || incident.lng]}
@@ -549,13 +514,13 @@ export default function AppMap() {
                             <label key={f.key} className={styles.filterItem}
                                 tabIndex={0} role="checkbox" aria-checked={filters[f.key]}
                                 aria-label={`Filtro ${f.label} (${categoryCount[f.key]} ocorrências)`}
-                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilters(prev => ({ ...prev, [f.key]: !prev[f.key] })); } }}>
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilter(f.key, !filters[f.key]); } }}>
                                 <div className={styles.filterLabel}>
                                     <input
                                         type="checkbox"
                                         className={styles.filterCheckbox}
                                         checked={filters[f.key]}
-                                        onChange={(e) => setFilters((prev) => ({ ...prev, [f.key]: e.target.checked }))}
+                                        onChange={(e) => setFilter(f.key, e.target.checked)}
                                         aria-label={f.label}
                                         tabIndex={-1}
                                     />
@@ -568,11 +533,11 @@ export default function AppMap() {
                     </div>
 
                     <div className={styles.filterActions} role="group" aria-label="Ações de filtro">
-                        <button className={styles.actionButton} onClick={() => setFilters({ CRITICAL: true, WARNING: true, EVENT: true })}
+                        <button className={styles.actionButton} onClick={() => { setFilter('CRITICAL', true); setFilter('WARNING', true); setFilter('EVENT', true); }}
                             aria-label="Selecionar todas as categorias" tabIndex={0}>
                             Todos
                         </button>
-                        <button className={styles.actionButton} onClick={() => setFilters({ CRITICAL: false, WARNING: false, EVENT: false })}
+                        <button className={styles.actionButton} onClick={() => { setFilter('CRITICAL', false); setFilter('WARNING', false); setFilter('EVENT', false); }}
                             aria-label="Limpar todos os filtros" tabIndex={0}>
                             Limpar
                         </button>
