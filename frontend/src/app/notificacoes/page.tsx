@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { useToast } from '@/shared/lib/toastStore';
+import { usarNotificacao } from '@/shared/lib/toastStore';
 import { useRouter } from 'next/navigation';
 import api from '@/shared/lib/api';
 import {
@@ -12,7 +12,7 @@ import {
 
 export default function NotificacoesPage() {
     const { isAuthenticated } = useAuth();
-    const { showToast } = useToast();
+    const { apresentarNotificacao } = usarNotificacao();
     const router = useRouter();
     const [tab, setTab] = useState<'alertas' | 'zonas'>('alertas');
     const [notificacoes, setNotificacoes] = useState<any[]>([]);
@@ -39,7 +39,7 @@ export default function NotificacoesPage() {
                 setZonas(data);
             }
         } catch (err: any) {
-            showToast(err.message, 'error');
+            apresentarNotificacao(err.message, 'error');
         } finally {
             setLoading(false);
         }
@@ -50,19 +50,19 @@ export default function NotificacoesPage() {
             await api.markAllRead();
             setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })));
             setNaoLidas(0);
-            showToast('Todas marcadas como lidas', 'success');
+            apresentarNotificacao('Todas marcadas como lidas', 'success');
         } catch { }
     };
 
     const addZone = async () => {
         try {
             await api.createZone(newZone);
-            showToast('Zona de interesse criada!', 'success');
+            apresentarNotificacao('Zona de interesse criada!', 'success');
             setShowAddZone(false);
             setNewZone({ nome: '', latitude: '-7.11532', longitude: '-34.86105', raio: '500' });
             loadData();
         } catch (err: any) {
-            showToast(err.message, 'error');
+            apresentarNotificacao(err.message, 'error');
         }
     };
 
@@ -76,7 +76,7 @@ export default function NotificacoesPage() {
     const deleteZone = async (id: number) => {
         try {
             await api.deleteZone(id);
-            showToast('Zona removida', 'info');
+            apresentarNotificacao('Zona removida', 'info');
             loadData();
         } catch { }
     };
@@ -202,7 +202,7 @@ export default function NotificacoesPage() {
                                         onClick={() => {
                                             // CA11 (1.3.2): Navigate to map centered on zone
                                             router.push(`/?lat=${z.latitude}&lng=${z.longitude}&zoom=15`);
-                                            showToast(`Centralizado em "${z.nome}"`, 'info');
+                                            apresentarNotificacao(`Centralizado em "${z.nome}"`, 'info');
                                         }}
                                         title={`Clique para ver "${z.nome}" no mapa`}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

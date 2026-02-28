@@ -1,325 +1,338 @@
-import React, { useState, useEffect } from 'react';
-import { X, MapPin, Camera, AlertTriangle, Upload, Trash2 } from 'lucide-react';
-import * as Dialog from '@radix-ui/react-dialog';
-import styles from './IncidentModal.module.css';
-import api from '@/shared/lib/api';
+"use client"; // Diretriz obrigatória para habilitar interatividade e corrigir o erro de renderização
 
-interface IncidentModalProps {
+import React, { useState, useEffect, FormEvent, ChangeEvent, ReactElement } from 'react';
+import {
+    X as IconeFechar,
+    MapPin as IconeMapa,
+    Camera as IconeCamera,
+    AlertTriangle as IconeAlerta,
+    Trash2 as IconeLixeira
+} from 'lucide-react';
+import * as ComponenteDialogo from '@radix-ui/react-dialog';
+import estilosVisuais from './IncidentModal.module.css';
+import servicoApi from '@/shared/lib/api';
+
+// ============================================================================
+// 1. Contratos e Interfaces
+// ============================================================================
+
+interface PropriedadesModalIncidente {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: any) => void;
+    onSubmit: (dadosEstruturados: any) => void;
     initialLocation: [number, number] | null;
 }
 
-export default function IncidentModal({ isOpen, onClose, onSubmit, initialLocation }: IncidentModalProps) {
-    const [step, setStep] = useState(1);
-    const [formData, setFormData] = useState({
-        type: 'WARNING',
-        category: '',
-        description: '',
-        lat: 0,
-        lng: 0,
-    });
-    const [files, setFiles] = useState<File[]>([]);
-    const [previews, setPreviews] = useState<string[]>([]);
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [endereco, setEndereco] = useState<string>('');
+interface DadosOcorrencia {
+    tipoSeveridade: string;
+    categoriaEspecifica: string;
+    descricaoDetalhada: string;
+    latitude: number;
+    longitude: number;
+}
 
-    // Update location when initialLocation changes
+// ============================================================================
+// 2. Classes de Domínio e Dicionários Estáticos
+// ============================================================================
+
+import { DicionarioCategorias } from '@/shared/domain/DicionarioCategorias';
+
+// ============================================================================
+// 3. Componente Principal
+// ============================================================================
+
+export default function ModalRegistroIncidente({
+    isOpen,
+    onClose,
+    onSubmit,
+    initialLocation
+}: PropriedadesModalIncidente): ReactElement | null {
+
+    // Estados do Componente
+    const [etapaAtualFluxo, definirEtapaAtualFluxo] = useState<number>(1);
+    const [formularioOcorrencia, definirFormularioOcorrencia] = useState<DadosOcorrencia>({
+        tipoSeveridade: 'WARNING',
+        categoriaEspecifica: '',
+        descricaoDetalhada: '',
+        latitude: 0,
+        longitude: 0,
+    });
+
+    const [arquivosMidia, definirArquivosMidia] = useState<File[]>([]);
+    const [previsualizacoesMidia, definirPrevisualizacoesMidia] = useState<string[]>([]);
+    const [errosValidacao, definirErrosValidacao] = useState<Record<string, string>>({});
+    const [enderecoLogradouro, definirEnderecoLogradouro] = useState<string>('');
+
+    // Efeito: Busca do endereço físico por coordenadas (Geocodificação Reversa)
     useEffect(() => {
         if (initialLocation) {
-            setFormData(prev => ({
-                ...prev,
-                lat: initialLocation[0],
-                lng: initialLocation[1],
+            definirFormularioOcorrencia((estadoAnterior) => ({
+                ...estadoAnterior,
+                latitude: initialLocation[0],
+                longitude: initialLocation[1],
             }));
-            // CA06 (1.2.1): Reverse Geocoding - get address from coordinates
-            api.reverseGeocode(initialLocation[0], initialLocation[1]).then(setEndereco);
+
+            servicoApi.reverseGeocode(initialLocation[0], initialLocation[1])
+                .then(definirEnderecoLogradouro)
+                .catch(() => definirEnderecoLogradouro('Endereço não identificado'));
         }
     }, [initialLocation]);
 
+    // Retorno preventivo (Early Return)
     if (!isOpen) return null;
 
-    const validate = () => {
-        const newErrors: Record<string, string> = {};
+    // ------------------------------------------------------------------------
+    // Processamento Lógico e Regras de Negócio
+    // ------------------------------------------------------------------------
 
-        if (!formData.category) {
-            newErrors.category = 'Selecione uma categoria';
+    const executarValidacaoRegras = (): boolean => {
+        const novosErros: Record<string, string> = {};
+
+        if (!formularioOcorrencia.categoriaEspecifica) {
+            novosErros.categoria = 'A seleção de uma categoria é obrigatória.';
         }
 
-        if (formData.description.length < 20) {
-            newErrors.description = `A descrição deve ter no mínimo 20 caracteres (atual: ${formData.description.length})`;
+        if (formularioOcorrencia.descricaoDetalhada.length < 20) {
+            novosErros.descricao = `A descrição necessita de no mínimo 20 caracteres (atual: ${formularioOcorrencia.descricaoDetalhada.length}).`;
         }
 
-        if (formData.description.length > 500) {
-            newErrors.description = `A descrição deve ter no máximo 500 caracteres (atual: ${formData.description.length})`;
+        if (formularioOcorrencia.descricaoDetalhada.length > 500) {
+            novosErros.descricao = `O limite máximo é de 500 caracteres (atual: ${formularioOcorrencia.descricaoDetalhada.length}).`;
         }
 
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
+        definirErrosValidacao(novosErros);
+        return Object.keys(novosErros).length === 0;
     };
 
-    const handleNextStep = () => {
-        if (validate()) {
-            setStep(2);
+    const avancarParaProximaEtapa = (): void => {
+        if (executarValidacaoRegras()) {
+            definirEtapaAtualFluxo(2);
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
+    const processarSubmissaoFinal = (evento: FormEvent): void => {
+        evento.preventDefault();
+
+        // Mapeamento dos dados para o contrato esperado pelo hook de mutação
         onSubmit({
-            ...formData,
+            type: formularioOcorrencia.tipoSeveridade,
+            category: formularioOcorrencia.categoriaEspecifica,
+            description: formularioOcorrencia.descricaoDetalhada,
+            lat: formularioOcorrencia.latitude,
+            lng: formularioOcorrencia.longitude,
             time: new Date().toISOString(),
             author: 'Usuário Local',
             veracity: 1,
         });
-        // Reset
-        setStep(1);
-        setFormData({ type: 'WARNING', category: '', description: '', lat: 0, lng: 0 });
-        setFiles([]);
-        setPreviews([]);
-        setErrors({});
+
+        // Restauração de Estados
+        definirEtapaAtualFluxo(1);
+        definirFormularioOcorrencia({ tipoSeveridade: 'WARNING', categoriaEspecifica: '', descricaoDetalhada: '', latitude: 0, longitude: 0 });
+        definirArquivosMidia([]);
+        definirPrevisualizacoesMidia([]);
+        definirErrosValidacao({});
         onClose();
     };
 
-    // File handling (CA01-CA12 of 1.2.4)
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFiles = Array.from(e.target.files || []);
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4'];
-        const maxSize = 5 * 1024 * 1024; // 5MB
+    const lidarComSelecaoArquivos = (evento: ChangeEvent<HTMLInputElement>): void => {
+        const arquivosSelecionados = Array.from(evento.target.files || []);
+        const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4'];
+        const tamanhoMaximoBytes = 5 * 1024 * 1024; // 5 Megabytes
 
-        for (const file of selectedFiles) {
-            if (!allowedTypes.includes(file.type)) {
-                setErrors(prev => ({ ...prev, files: `Formato não suportado: ${file.type}. Use JPG, PNG, WEBP ou MP4.` }));
+        for (const arquivo of arquivosSelecionados) {
+            if (!tiposPermitidos.includes(arquivo.type)) {
+                definirErrosValidacao((errosAnteriores) => ({ ...errosAnteriores, arquivos: `Formato rejeitado: ${arquivo.type}. Utilize JPG, PNG, WEBP ou MP4.` }));
                 return;
             }
-            if (file.size > maxSize) {
-                setErrors(prev => ({ ...prev, files: 'Arquivo muito grande. O limite é 5MB.' }));
+            if (arquivo.size > tamanhoMaximoBytes) {
+                definirErrosValidacao((errosAnteriores) => ({ ...errosAnteriores, arquivos: 'O arquivo excede o limite de 5MB.' }));
                 return;
             }
         }
 
-        // Max 3 files
-        const totalFiles = [...files, ...selectedFiles].slice(0, 3);
-        setFiles(totalFiles);
+        const arquivosConsolidados = [...arquivosMidia, ...arquivosSelecionados].slice(0, 3);
+        definirArquivosMidia(arquivosConsolidados);
 
-        // Generate previews
-        const newPreviews = totalFiles.map(f => URL.createObjectURL(f));
-        setPreviews(newPreviews);
-        setErrors(prev => { const { files: _, ...rest } = prev; return rest; });
+        const geradorDeImagens = arquivosConsolidados.map((arq) => URL.createObjectURL(arq));
+        definirPrevisualizacoesMidia(geradorDeImagens);
+
+        // Remove erro de arquivo caso exista
+        definirErrosValidacao((errosAnteriores) => {
+            const { arquivos: _, ...errosRestantes } = errosAnteriores;
+            return errosRestantes;
+        });
     };
 
-    const removeFile = (index: number) => {
-        setFiles(prev => prev.filter((_, i) => i !== index));
-        setPreviews(prev => prev.filter((_, i) => i !== index));
+    const excluirMidiaAnexada = (indiceAlvo: number): void => {
+        definirArquivosMidia((listaAnterior) => listaAnterior.filter((_, indiceAtual) => indiceAtual !== indiceAlvo));
+        definirPrevisualizacoesMidia((listaAnterior) => listaAnterior.filter((_, indiceAtual) => indiceAtual !== indiceAlvo));
     };
 
-    const categories: Record<string, { label: string; value: string }[]> = {
-        CRITICAL: [
-            { label: 'Assalto à mão armada', value: 'Assalto à mão armada' },
-            { label: 'Homicídio/Tiroteio', value: 'Homicídio/Tiroteio' },
-            { label: 'Agressão Física', value: 'Agressão Física' },
-        ],
-        WARNING: [
-            { label: 'Furto', value: 'Furto' },
-            { label: 'Buraco na Via', value: 'Buraco na Via' },
-            { label: 'Iluminação Deficiente', value: 'Iluminação Deficiente' },
-            { label: 'Acidente de Trânsito', value: 'Acidente de Trânsito' },
-        ],
-        EVENT: [
-            { label: 'Mutirão de Limpeza', value: 'Mutirão de Limpeza' },
-            { label: 'Feira de Bairro', value: 'Feira de Bairro' },
-            { label: 'Festa Comunitária', value: 'Festa Comunitária' },
-            { label: 'Reunião de Bairro', value: 'Reunião de Bairro' },
-            { label: 'Evento Esportivo', value: 'Evento Esportivo' },
-        ],
-    };
+    // ------------------------------------------------------------------------
+    // Renderização do Template JSX
+    // ------------------------------------------------------------------------
 
     return (
-        <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <Dialog.Portal>
-                <Dialog.Overlay className={styles.overlay} />
-                <Dialog.Content className={styles.modal} aria-describedby="modal-desc">
-                    <div className={styles.header}>
-                        <Dialog.Title id="modal-title" style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>
+        <ComponenteDialogo.Root open={isOpen} onOpenChange={(aberto) => !aberto && onClose()}>
+            <ComponenteDialogo.Portal>
+                <ComponenteDialogo.Overlay className={estilosVisuais.overlay} />
+                <ComponenteDialogo.Content className={estilosVisuais.modal}>
+
+                    <div className={estilosVisuais.header}>
+                        <ComponenteDialogo.Title style={{ fontSize: 20, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
                             Registrar Nova Ocorrência
-                        </Dialog.Title>
-                        <Dialog.Close asChild>
-                            <button className={styles.closeBtn} aria-label="Fechar">
-                                <X size={24} />
+                        </ComponenteDialogo.Title>
+                        <ComponenteDialogo.Close asChild>
+                            <button className={estilosVisuais.closeBtn} aria-label="Abortar inclusão">
+                                <IconeFechar size={24} />
                             </button>
-                        </Dialog.Close>
+                        </ComponenteDialogo.Close>
                     </div>
 
-                    <p id="modal-desc" className="sr-only">Preencha os detalhes e a localização do evento ou incidente.</p>
+                    {/* Correção crítica: Uso obrigatório do Dialog.Description para acessibilidade */}
+                    <ComponenteDialogo.Description className="sr-only">
+                        Formulário para preenchimento de detalhes e envio de evidências fotográficas do incidente.
+                    </ComponenteDialogo.Description>
 
-                    {/* Progress Steps */}
-                    <div style={{
-                        display: 'flex', padding: '12px 24px',
-                        background: 'var(--bg-primary)',
-                        borderBottom: '1px solid var(--glass-border)',
-                        gap: 8,
-                    }}>
-                        {[1, 2].map(s => (
-                            <div key={s} style={{
-                                flex: 1, height: 4, borderRadius: 2,
-                                background: s <= step ? 'var(--primary-color)' : 'var(--glass-border)',
-                                transition: 'background 0.3s',
-                            }} />
+                    {/* Indicador de Progresso */}
+                    <div style={{ display: 'flex', padding: '12px 24px', background: 'var(--bg-primary)', borderBottom: '1px solid var(--glass-border)', gap: 8 }}>
+                        {[1, 2].map((passoNumerico) => (
+                            <div key={passoNumerico} style={{ flex: 1, height: 4, borderRadius: 2, background: passoNumerico <= etapaAtualFluxo ? 'var(--primary-color)' : 'var(--glass-border)', transition: 'background 0.3s' }} />
                         ))}
                     </div>
 
-                    <form onSubmit={handleSubmit} className={styles.content}>
-                        {step === 1 && (
-                            <div className={styles.step}>
-                                <h3>1. O que aconteceu?</h3>
+                    <form onSubmit={processarSubmissaoFinal} className={estilosVisuais.content}>
 
-                                <div className={styles.typeSelector}>
+                        {etapaAtualFluxo === 1 && (
+                            <div className={estilosVisuais.step}>
+                                <h3 style={{ color: "var(--text-primary)" }}>1. O que aconteceu?</h3>
+
+                                <div className={estilosVisuais.typeSelector}>
                                     {[
-                                        { type: 'CRITICAL', label: 'Crime Violento', sub: 'Assalto, Agressão', style: 'activeCritical' },
-                                        { type: 'WARNING', label: 'Furto / Risco', sub: 'Furto, Falta de Luz', style: 'activeWarning' },
-                                        { type: 'EVENT', label: 'Evento', sub: 'Feira, Mutirão', style: 'activeEvent' },
-                                    ].map(item => (
-                                        <label key={item.type}
-                                            className={`${styles.typeCard} ${formData.type === item.type ? styles[item.style] : ''}`}>
-                                            <input type="radio" name="type" value={item.type}
-                                                checked={formData.type === item.type}
-                                                onChange={(e) => setFormData({ ...formData, type: e.target.value, category: '' })} />
-                                            <AlertTriangle size={22} />
-                                            <span>{item.label}</span>
-                                            <small>{item.sub}</small>
+                                        { chave: 'CRITICAL', rotulo: 'Crime Violento', subRotulo: 'Assalto, Agressão', estiloClass: 'activeCritical' },
+                                        { chave: 'WARNING', rotulo: 'Furto / Risco', subRotulo: 'Furto, Acidente', estiloClass: 'activeWarning' },
+                                        { chave: 'INFRASTRUCTURE', rotulo: 'Zeladoria', subRotulo: 'Falta de Luz, Buracos', estiloClass: 'activeWarning' },
+                                        { chave: 'INFO', rotulo: 'Utilidade Pública', subRotulo: 'Bloqueio, Animais', estiloClass: 'activeEvent' },
+                                        { chave: 'EVENT', rotulo: 'Evento Social', subRotulo: 'Feira, Mutirão', estiloClass: 'activeEvent' },
+                                    ].map((opcao) => (
+                                        <label key={opcao.chave} className={`${estilosVisuais.typeCard} ${formularioOcorrencia.tipoSeveridade === opcao.chave ? estilosVisuais[opcao.estiloClass] : ''}`}>
+                                            <input type="radio" name="tipoSeveridade" value={opcao.chave} checked={formularioOcorrencia.tipoSeveridade === opcao.chave} onChange={(e) => definirFormularioOcorrencia({ ...formularioOcorrencia, tipoSeveridade: e.target.value, categoriaEspecifica: '' })} style={{ display: 'none' }} />
+                                            <IconeAlerta size={22} />
+                                            <span style={{ color: "var(--text-primary)" }}>{opcao.rotulo}</span>
+                                            <small>{opcao.subRotulo}</small>
                                         </label>
                                     ))}
                                 </div>
 
-                                <div className={styles.formGroup}>
+                                <div className={estilosVisuais.formGroup}>
                                     <label>Categoria Específica *</label>
                                     <select
                                         required
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                        className={styles.input}
-                                        style={errors.category ? { borderColor: '#ef4444' } : {}}
+                                        value={formularioOcorrencia.categoriaEspecifica}
+                                        onChange={(evento) => definirFormularioOcorrencia({ ...formularioOcorrencia, categoriaEspecifica: evento.target.value })}
+                                        className={estilosVisuais.input}
+                                        style={errosValidacao.categoria ? { borderColor: '#ef4444' } : {}}
                                     >
-                                        <option value="">Selecione...</option>
-                                        {(categories[formData.type] || []).map(cat => (
-                                            <option key={cat.value} value={cat.value}>{cat.label}</option>
+                                        <option value="">Selecione uma opção...</option>
+                                        {(DicionarioCategorias.OPCOES[formularioOcorrencia.tipoSeveridade] || []).map((categoria) => (
+                                            <option key={categoria.valor} value={categoria.valor}>{categoria.rotulo}</option>
                                         ))}
                                     </select>
-                                    {errors.category && <span style={{ color: '#ef4444', fontSize: 12 }}>{errors.category}</span>}
+                                    {errosValidacao.categoria && <span style={{ color: '#ef4444', fontSize: 12 }}>{errosValidacao.categoria}</span>}
                                 </div>
 
-                                <div className={styles.formGroup}>
-                                    <label>Descrição Detalhada * ({formData.description.length}/500)</label>
+                                <div className={estilosVisuais.formGroup}>
+                                    <label>Descrição Detalhada * ({formularioOcorrencia.descricaoDetalhada.length}/500)</label>
                                     <textarea
                                         required
-                                        placeholder="Descreva o que aconteceu em detalhes (mínimo 20 caracteres)..."
-                                        className={styles.input}
+                                        placeholder="Relate minuciosamente o fato ocorrido..."
+                                        className={estilosVisuais.input}
                                         rows={4}
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        value={formularioOcorrencia.descricaoDetalhada}
+                                        onChange={(evento) => definirFormularioOcorrencia({ ...formularioOcorrencia, descricaoDetalhada: evento.target.value })}
                                         maxLength={500}
-                                        style={errors.description ? { borderColor: '#ef4444' } : {}}
+                                        style={errosValidacao.descricao ? { borderColor: '#ef4444' } : {}}
                                     />
-                                    {errors.description && <span style={{ color: '#ef4444', fontSize: 12 }}>{errors.description}</span>}
-                                    {formData.description.length < 20 && formData.description.length > 0 && (
+                                    {errosValidacao.descricao && <span style={{ color: '#ef4444', fontSize: 12 }}>{errosValidacao.descricao}</span>}
+                                    {formularioOcorrencia.descricaoDetalhada.length < 20 && formularioOcorrencia.descricaoDetalhada.length > 0 && (
                                         <span style={{ color: '#f59e0b', fontSize: 11 }}>
-                                            Faltam {20 - formData.description.length} caracteres
+                                            Escreva mais {20 - formularioOcorrencia.descricaoDetalhada.length} caracteres para habilitar.
                                         </span>
                                     )}
                                 </div>
 
-                                <button type="button" className={styles.primaryBtn} onClick={handleNextStep}>
-                                    Próximo Passo
+                                <button type="button" className={estilosVisuais.primaryBtn} onClick={avancarParaProximaEtapa}>
+                                    Prosseguir
                                 </button>
                             </div>
                         )}
 
-                        {step === 2 && (
-                            <div className={styles.step}>
-                                <h3>2. Local e Evidências</h3>
+                        {etapaAtualFluxo === 2 && (
+                            <div className={estilosVisuais.step}>
+                                <h3 style={{ color: "var(--text-primary)" }}>2. Evidências e Local</h3>
 
-                                <div className={styles.formGroup}>
-                                    <label>Localização</label>
-                                    <div className={styles.locationBox}>
-                                        <MapPin size={20} color="var(--primary-color)" />
+                                <div className={estilosVisuais.formGroup}>
+                                    <label>Área Geográfica Mapeada</label>
+                                    <div className={estilosVisuais.locationBox}>
+                                        <IconeMapa size={20} color="var(--primary-color)" />
                                         <div style={{ flex: 1 }}>
                                             <span>
-                                                {initialLocation
-                                                    ? `${initialLocation[0].toFixed(5)}, ${initialLocation[1].toFixed(5)}`
-                                                    : 'Clique no mapa para definir...'}
+                                                {initialLocation ? `${initialLocation[0].toFixed(5)}, ${initialLocation[1].toFixed(5)}` : 'Aguardando seleção no mapa...'}
                                             </span>
-                                            {endereco && (
+                                            {enderecoLogradouro && (
                                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
-                                                    📍 {endereco}
+                                                    📍 {enderecoLogradouro}
                                                 </div>
                                             )}
                                         </div>
                                         {initialLocation && (
                                             <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 600 }}>
-                                                ✓ Definido
+                                                ✓ Capturado
                                             </span>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* Media Upload (Feature 1.2.4) */}
-                                <div className={styles.formGroup}>
-                                    <label>Fotos / Vídeos (max 3 arquivos, 5MB cada)</label>
+                                <div className={estilosVisuais.formGroup}>
+                                    <label>Acervo Multimídia (Máx: 3 arquivos, 5MB/cada)</label>
 
-                                    {/* Thumbnails Grid */}
-                                    {previews.length > 0 && (
+                                    {previsualizacoesMidia.length > 0 && (
                                         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                                            {previews.map((src, i) => (
-                                                <div key={i} style={{
-                                                    width: 80, height: 80, borderRadius: 8,
-                                                    overflow: 'hidden', position: 'relative',
-                                                    border: '1px solid var(--glass-border)',
-                                                }}>
-                                                    <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    <button type="button" onClick={() => removeFile(i)}
-                                                        style={{
-                                                            position: 'absolute', top: 2, right: 2,
-                                                            background: 'rgba(239,68,68,0.9)', color: 'white',
-                                                            border: 'none', borderRadius: 4, width: 20, height: 20,
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            cursor: 'pointer', padding: 0,
-                                                        }}>
-                                                        <Trash2 size={12} />
+                                            {previsualizacoesMidia.map((fonteImagem, indiceElemento) => (
+                                                <div key={indiceElemento} style={{ width: 80, height: 80, borderRadius: 8, overflow: 'hidden', position: 'relative', border: '1px solid var(--glass-border)' }}>
+                                                    <img src={fonteImagem} alt="Pré-visualização do anexo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <button type="button" onClick={() => excluirMidiaAnexada(indiceElemento)} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', borderRadius: 4, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                                                        <IconeLixeira size={12} />
                                                     </button>
                                                 </div>
                                             ))}
                                         </div>
                                     )}
 
-                                    {files.length < 3 && (
-                                        <div className={styles.uploadBox}>
-                                            <Camera size={24} />
-                                            <span>Adicionar Mídia (Opcional)</span>
-                                            <small style={{ color: 'var(--text-secondary)' }}>JPG, PNG, WEBP, MP4</small>
-                                            <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4"
-                                                multiple onChange={handleFileSelect}
-                                                className={styles.hiddenFile} />
+                                    {arquivosMidia.length < 3 && (
+                                        <div className={estilosVisuais.uploadBox}>
+                                            <IconeCamera size={24} />
+                                            <span>Anexar Nova Mídia (Opcional)</span>
+                                            <small style={{ color: 'var(--text-secondary)' }}>Extensões: JPG, PNG, WEBP, MP4</small>
+                                            <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4" multiple onChange={lidarComSelecaoArquivos} className={estilosVisuais.hiddenFile} />
                                         </div>
                                     )}
-                                    {errors.files && <span style={{ color: '#ef4444', fontSize: 12 }}>{errors.files}</span>}
+                                    {errosValidacao.arquivos && <span style={{ color: '#ef4444', fontSize: 12 }}>{errosValidacao.arquivos}</span>}
                                 </div>
 
-                                <div className={styles.actionButtons}>
-                                    <button type="button" className={styles.secondaryBtn} onClick={() => setStep(1)}>
-                                        Voltar
+                                <div className={estilosVisuais.actionButtons}>
+                                    <button type="button" className={estilosVisuais.secondaryBtn} onClick={() => definirEtapaAtualFluxo(1)}>
+                                        Corrigir Etapa Anterior
                                     </button>
-                                    <button type="submit" className={styles.primaryBtn}
-                                        disabled={!initialLocation}
-                                        style={{ flex: 2 }}>
-                                        🚨 Publicar Alerta
+                                    <button type="submit" className={estilosVisuais.primaryBtn} disabled={!initialLocation} style={{ flex: 2 }}>
+                                        🚨 Emitir Alerta Comunitário
                                     </button>
                                 </div>
                             </div>
                         )}
                     </form>
-                </Dialog.Content>
-            </Dialog.Portal>
-        </Dialog.Root>
+                </ComponenteDialogo.Content>
+            </ComponenteDialogo.Portal>
+        </ComponenteDialogo.Root>
     );
 }

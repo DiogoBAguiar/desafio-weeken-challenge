@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { useToast } from '@/shared/lib/toastStore';
+import { usarNotificacao } from '@/shared/lib/toastStore';
 import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/shared/lib/api';
 import {
@@ -13,7 +13,7 @@ import {
 
 function ProfileContent() {
     const { usuario, isAuthenticated, updateUser } = useAuth();
-    const { showToast } = useToast();
+    const { apresentarNotificacao } = usarNotificacao();
     const router = useRouter();
     const searchParams = useSearchParams();
     const tabParam = searchParams.get('tab');
@@ -59,7 +59,7 @@ function ProfileContent() {
                 setExtrato(ext);
             }
         } catch (err: any) {
-            showToast(err.message, 'error');
+            apresentarNotificacao(err.message, 'error');
         } finally {
             setLoading(false);
         }
@@ -69,10 +69,10 @@ function ProfileContent() {
         try {
             const res = await api.updateProfile(editForm);
             updateUser(res.usuario);
-            showToast('Perfil atualizado!', 'success');
+            apresentarNotificacao('Perfil atualizado!', 'success');
             setEditing(false);
         } catch (err: any) {
-            showToast(err.message, 'error');
+            apresentarNotificacao(err.message, 'error');
         }
     };
 
@@ -83,7 +83,7 @@ function ProfileContent() {
             setQrCodeUrl(res.qrCodeUrl);
             setShow2FASetup(true);
         } catch (err: any) {
-            showToast(err.message, 'error');
+            apresentarNotificacao(err.message, 'error');
         }
     };
 
@@ -93,9 +93,9 @@ function ProfileContent() {
             setIs2FAEnabled(true);
             setShow2FASetup(false);
             setTotpCode('');
-            showToast('2FA ativado com sucesso!', 'success');
+            apresentarNotificacao('2FA ativado com sucesso!', 'success');
         } catch (err: any) {
-            showToast(err.message, 'error');
+            apresentarNotificacao(err.message, 'error');
         }
     };
 
@@ -104,9 +104,9 @@ function ProfileContent() {
             await api.disable2FA(disablePassword);
             setIs2FAEnabled(false);
             setDisablePassword('');
-            showToast('2FA desativado.', 'success');
+            apresentarNotificacao('2FA desativado.', 'success');
         } catch (err: any) {
-            showToast(err.message, 'error');
+            apresentarNotificacao(err.message, 'error');
         }
     };
 
@@ -121,11 +121,11 @@ function ProfileContent() {
     const processPhoto = (file: File) => {
         const allowed = ['image/jpeg', 'image/png', 'image/webp'];
         if (!allowed.includes(file.type)) {
-            showToast('Formato inválido. Use JPG, PNG ou WEBP.', 'error');
+            apresentarNotificacao('Formato inválido. Use JPG, PNG ou WEBP.', 'error');
             return;
         }
         if (file.size > 2 * 1024 * 1024) {
-            showToast('Tamanho máximo: 2MB.', 'error');
+            apresentarNotificacao('Tamanho máximo: 2MB.', 'error');
             return;
         }
         const reader = new FileReader();
@@ -133,7 +133,7 @@ function ProfileContent() {
             setPhotoPreview(ev.target?.result as string);
             // In production: upload to server, here we save as base64
             api.updateProfile({ fotoPerfil: ev.target?.result as string });
-            showToast('Foto atualizada!', 'success');
+            apresentarNotificacao('Foto atualizada!', 'success');
         };
         reader.readAsDataURL(file);
     };

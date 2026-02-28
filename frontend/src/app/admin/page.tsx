@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { useToast } from '@/shared/lib/toastStore';
+import { usarNotificacao } from '@/shared/lib/toastStore';
 import { useRouter } from 'next/navigation';
 import api from '@/shared/lib/api';
 import {
@@ -12,7 +12,7 @@ import {
 
 export default function AdminPage() {
     const { usuario, isAuthenticated } = useAuth();
-    const { showToast } = useToast();
+    const { apresentarNotificacao } = usarNotificacao();
     const router = useRouter();
     const [tab, setTab] = useState('dashboard');
     const [stats, setStats] = useState<any>(null);
@@ -50,7 +50,7 @@ export default function AdminPage() {
             }
         } catch (err: any) {
             if (err.message.includes('permissão')) {
-                showToast('Sem permissão para acessar este recurso', 'error');
+                apresentarNotificacao('Sem permissão para acessar este recurso', 'error');
             }
         } finally {
             setLoading(false);
@@ -59,16 +59,16 @@ export default function AdminPage() {
 
     const handleModeration = async (incidenteId: number, acao: string) => {
         if (justificativa.length < 30) {
-            showToast('A justificativa deve ter no mínimo 30 caracteres', 'error');
+            apresentarNotificacao('A justificativa deve ter no mínimo 30 caracteres', 'error');
             return;
         }
         try {
             await api.moderateAction(incidenteId, acao, justificativa);
-            showToast(`Ação "${acao}" realizada com sucesso`, 'success');
+            apresentarNotificacao(`Ação "${acao}" realizada com sucesso`, 'success');
             setJustificativa('');
             loadData();
         } catch (err: any) {
-            showToast(err.message, 'error');
+            apresentarNotificacao(err.message, 'error');
         }
     };
 
@@ -78,10 +78,10 @@ export default function AdminPage() {
 
         try {
             await api.changeUserRole(userId, role, senhaConfirmacao);
-            showToast('Perfil alterado com sucesso', 'success');
+            apresentarNotificacao('Perfil alterado com sucesso', 'success');
             loadData();
         } catch (err: any) {
-            showToast(err.message, 'error');
+            apresentarNotificacao(err.message, 'error');
         }
     };
 
@@ -94,7 +94,7 @@ export default function AdminPage() {
                 const a = document.createElement('a');
                 a.href = url; a.download = 'dados_seguranca.json'; a.click();
             }
-            showToast('Dados exportados!', 'success');
+            apresentarNotificacao('Dados exportados!', 'success');
         } catch { }
     };
 
@@ -380,7 +380,7 @@ export default function AdminPage() {
                                                     <button onClick={() => {
                                                         const motivo = prompt('Motivo do banimento (mín 30 caracteres):');
                                                         if (motivo && motivo.length >= 30) {
-                                                            api.banUser(u.id, motivo, false).then(() => { showToast('Usuário banido', 'success'); loadData(); }).catch((e: any) => showToast(e.message, 'error'));
+                                                            api.banUser(u.id, motivo, false).then(() => { apresentarNotificacao('Usuário banido', 'success'); loadData(); }).catch((e: any) => apresentarNotificacao(e.message, 'error'));
                                                         }
                                                     }}
                                                         style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer' }}>

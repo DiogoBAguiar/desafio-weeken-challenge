@@ -1,0 +1,30 @@
+﻿src/app/admin/page.tsx(5,10): error TS2305: Module '"@/shared/lib/toastStore"' has no exported member 'useToast'.
+src/app/layout.tsx(38,75): error TS2503: Cannot find namespace 'JSX'.
+src/app/login/page.tsx(12,13): error TS2339: Property 'showToast' does not exist on type 'ContratoEstadoNotificacao'.
+src/app/notificacoes/page.tsx(5,10): error TS2305: Module '"@/shared/lib/toastStore"' has no exported member 'useToast'.
+src/app/perfil/page.tsx(16,13): error TS2339: Property 'showToast' does not exist on type 'ContratoEstadoNotificacao'.
+src/app/register/page.tsx(5,10): error TS2305: Module '"@/shared/lib/toastStore"' has no exported member 'useToast'.
+src/features/map/components/Map/Map.tsx(232,31): error TS2345: Argument of type '"INFRASTRUCTURE"' is not assignable to parameter of type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(233,31): error TS2345: Argument of type '"INFO"' is not assignable to parameter of type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(234,31): error TS2345: Argument of type '"ANTIGOS"' is not assignable to parameter of type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(362,27): error TS2339: Property 'ANTIGOS' does not exist on type 'Record<CategoryType, boolean>'.
+src/features/map/components/Map/Map.tsx(366,70): error TS2339: Property 'INFRASTRUCTURE' does not exist on type 'Record<CategoryType, boolean>'.
+src/features/map/components/Map/Map.tsx(367,60): error TS2339: Property 'INFO' does not exist on type 'Record<CategoryType, boolean>'.
+src/features/map/components/Map/Map.tsx(372,129): error TS2339: Property 'INFRASTRUCTURE' does not exist on type 'Record<CategoryType, boolean>'.
+src/features/map/components/Map/Map.tsx(372,162): error TS2339: Property 'INFO' does not exist on type 'Record<CategoryType, boolean>'.
+src/features/map/components/Map/Map.tsx(556,139): error TS7053: Element implicitly has an 'any' type because expression of type 'TipoCategoria' can't be used to index type 'Record<CategoryType, boolean>'.
+  Property 'INFRASTRUCTURE' does not exist on type 'Record<CategoryType, boolean>'.
+src/features/map/components/Map/Map.tsx(556,430): error TS2345: Argument of type 'TipoCategoria' is not assignable to parameter of type 'CategoryType'.
+  Type '"INFRASTRUCTURE"' is not assignable to type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(556,448): error TS7053: Element implicitly has an 'any' type because expression of type 'TipoCategoria' can't be used to index type 'Record<CategoryType, boolean>'.
+  Property 'INFRASTRUCTURE' does not exist on type 'Record<CategoryType, boolean>'.
+src/features/map/components/Map/Map.tsx(558,111): error TS7053: Element implicitly has an 'any' type because expression of type 'TipoCategoria' can't be used to index type 'Record<CategoryType, boolean>'.
+  Property 'INFRASTRUCTURE' does not exist on type 'Record<CategoryType, boolean>'.
+src/features/map/components/Map/Map.tsx(558,186): error TS2345: Argument of type 'TipoCategoria' is not assignable to parameter of type 'CategoryType'.
+  Type '"INFRASTRUCTURE"' is not assignable to type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(568,199): error TS2345: Argument of type '"INFRASTRUCTURE"' is not assignable to parameter of type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(568,238): error TS2345: Argument of type '"INFO"' is not assignable to parameter of type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(568,267): error TS2345: Argument of type '"ANTIGOS"' is not assignable to parameter of type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(571,202): error TS2345: Argument of type '"INFRASTRUCTURE"' is not assignable to parameter of type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(571,242): error TS2345: Argument of type '"INFO"' is not assignable to parameter of type 'CategoryType'.
+src/features/map/components/Map/Map.tsx(571,272): error TS2345: Argument of type '"ANTIGOS"' is not assignable to parameter of type 'CategoryType'.

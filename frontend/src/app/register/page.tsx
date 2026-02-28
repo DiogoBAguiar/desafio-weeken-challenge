@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { useToast } from '@/shared/lib/toastStore';
+import { usarNotificacao } from '@/shared/lib/toastStore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, User, Mail, Lock, Eye, EyeOff, FileCheck, ArrowRight } from 'lucide-react';
 
 export default function RegisterPage() {
     const { register } = useAuth();
-    const { showToast } = useToast();
+    const { apresentarNotificacao } = usarNotificacao();
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -44,22 +44,22 @@ export default function RegisterPage() {
         e.preventDefault();
 
         if (form.senha !== form.confirmacaoSenha) {
-            showToast('As senhas não coincidem', 'error');
+            apresentarNotificacao('As senhas não coincidem', 'error');
             return;
         }
 
         if (!form.aceitouTermos) {
-            showToast('Você deve aceitar os Termos de Uso e Política de Privacidade', 'error');
+            apresentarNotificacao('Você deve aceitar os Termos de Uso e Política de Privacidade', 'error');
             return;
         }
 
         setLoading(true);
         try {
             await register(form);
-            showToast('Cadastro realizado com sucesso! Bem-vindo!', 'success');
+            apresentarNotificacao('Cadastro realizado com sucesso! Bem-vindo!', 'success');
             router.push('/');
         } catch (err: any) {
-            showToast(err.message || 'Erro ao criar conta', 'error');
+            apresentarNotificacao(err.message || 'Erro ao criar conta', 'error');
         } finally {
             setLoading(false);
         }

@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { useToast } from '@/shared/lib/toastStore';
+import { usarNotificacao } from '@/shared/lib/toastStore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
     const { login } = useAuth();
-    const { showToast } = useToast();
+    const { apresentarNotificacao } = usarNotificacao();
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
@@ -21,16 +21,16 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email || !senha) {
-            showToast('Preencha todos os campos', 'error');
+            apresentarNotificacao('Preencha todos os campos', 'error');
             return;
         }
         setLoading(true);
         try {
             await login(email, senha);
-            showToast('Login realizado com sucesso!', 'success');
+            apresentarNotificacao('Login realizado com sucesso!', 'success');
             router.push('/');
         } catch (err: any) {
-            showToast(err.message || 'Erro ao fazer login', 'error');
+            apresentarNotificacao(err.message || 'Erro ao fazer login', 'error');
         } finally {
             setLoading(false);
         }
@@ -41,10 +41,10 @@ export default function LoginPage() {
         try {
             const { default: api } = await import('@/shared/lib/api');
             await api.forgotPassword(forgotEmail);
-            showToast('Se o e-mail estiver cadastrado, você receberá as instruções.', 'info');
+            apresentarNotificacao('Se o e-mail estiver cadastrado, você receberá as instruções.', 'info');
             setShowForgot(false);
         } catch {
-            showToast('Erro ao processar recuperação.', 'error');
+            apresentarNotificacao('Erro ao processar recuperação.', 'error');
         }
     };
 
