@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { autenticar, autorizar } from '../middleware/auth';
 import { ROLES, POINTS, SUSPENSION_THRESHOLD } from '../utils/constants';
@@ -500,8 +501,21 @@ router.get('/usuarios', autenticar, autorizar(ROLES.ADMIN), async (req: Request,
  */
 router.put('/usuarios/:id/role', autenticar, autorizar(ROLES.ADMIN), async (req: Request, res: Response) => {
     try {
-        const { role } = req.body;
-        const userId = parseInt(req.params.id);
+        const { role, senhaConfirmacao } = req.body;
+        const userId = parseInt(req.params.id as string);
+
+        // CA08 (1.6.2): Require password confirmation for role changes
+        if (!senhaConfirmacao) {
+            return res.status(400).json({ error: 'Confirmação de senha é obrigatória para alterar perfis.' });
+        }
+
+        const admin = await prisma.usuario.findUnique({ where: { id: req.usuario!.id } });
+        if (!admin) return res.status(404).json({ error: 'Admin não encontrado.' });
+
+        const senhaValida = await bcrypt.compare(senhaConfirmacao, admin.senhaHash);
+        if (!senhaValida) {
+            return res.status(401).json({ error: 'Senha de confirmação incorreta.' });
+        }
 
         // CA03: Cannot change own role
         if (userId === req.usuario!.id) {

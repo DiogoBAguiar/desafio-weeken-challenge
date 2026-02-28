@@ -196,15 +196,24 @@ export default function NotificacoesPage() {
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                         border: '1px solid var(--glass-border)',
                                         opacity: z.ativo ? 1 : 0.5,
-                                    }}>
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                    }}
+                                        onClick={() => {
+                                            // CA11 (1.3.2): Navigate to map centered on zone
+                                            router.push(`/?lat=${z.latitude}&lng=${z.longitude}&zoom=15`);
+                                            showToast(`Centralizado em "${z.nome}"`, 'info');
+                                        }}
+                                        title={`Clique para ver "${z.nome}" no mapa`}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                             <MapPin size={20} color="var(--primary-color)" />
                                             <div>
                                                 <div style={{ fontWeight: 600, fontSize: 14 }}>{z.nome}</div>
-                                                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Raio: {z.raio}m</div>
+                                                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Raio: {z.raio}m · Clique para ver no mapa</div>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                                            onClick={(e) => e.stopPropagation()}>
                                             <button onClick={() => toggleZone(z.id)}
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: z.ativo ? 'var(--success-color)' : 'var(--text-secondary)' }}>
                                                 {z.ativo ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}

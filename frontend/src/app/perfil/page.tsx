@@ -7,7 +7,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import api from '@/services/api';
 import {
     User, Award, FileText, Trophy, Shield, Settings,
-    ChevronRight, Calendar, TrendingUp, Star, Edit3, Save
+    ChevronRight, Calendar, TrendingUp, Star, Edit3, Save,
+    Lock, Upload, Download, Camera
 } from 'lucide-react';
 
 function ProfileContent() {
@@ -24,6 +25,15 @@ function ProfileContent() {
     const [editing, setEditing] = useState(false);
     const [editForm, setEditForm] = useState({ pseudonimo: '', miniBio: '' });
     const [loading, setLoading] = useState(false);
+    // 2FA State
+    const [show2FASetup, setShow2FASetup] = useState(false);
+    const [qrCodeUrl, setQrCodeUrl] = useState('');
+    const [totpCode, setTotpCode] = useState('');
+    const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+    const [disablePassword, setDisablePassword] = useState('');
+    // Photo state
+    const [dragActive, setDragActive] = useState(false);
+    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -66,6 +76,103 @@ function ProfileContent() {
         }
     };
 
+    // 2FA setup
+    const handle2FASetup = async () => {
+        try {
+            const res = await api.setup2FA();
+            setQrCodeUrl(res.qrCodeUrl);
+            setShow2FASetup(true);
+        } catch (err: any) {
+            showToast(err.message, 'error');
+        }
+    };
+
+    const handle2FAVerify = async () => {
+        try {
+            await api.verify2FA(totpCode);
+            setIs2FAEnabled(true);
+            setShow2FASetup(false);
+            setTotpCode('');
+            showToast('2FA ativado com sucesso!', 'success');
+        } catch (err: any) {
+            showToast(err.message, 'error');
+        }
+    };
+
+    const handle2FADisable = async () => {
+        try {
+            await api.disable2FA(disablePassword);
+            setIs2FAEnabled(false);
+            setDisablePassword('');
+            showToast('2FA desativado.', 'success');
+        } catch (err: any) {
+            showToast(err.message, 'error');
+        }
+    };
+
+    // Photo drag & drop (CA05 of 1.4.1)
+    const handlePhotoDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragActive(false);
+        const file = e.dataTransfer.files[0];
+        if (file) processPhoto(file);
+    };
+
+    const processPhoto = (file: File) => {
+        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowed.includes(file.type)) {
+            showToast('Formato inválido. Use JPG, PNG ou WEBP.', 'error');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            showToast('Tamanho máximo: 2MB.', 'error');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            setPhotoPreview(ev.target?.result as string);
+            // In production: upload to server, here we save as base64
+            api.updateProfile({ fotoPerfil: ev.target?.result as string });
+            showToast('Foto atualizada!', 'success');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // PDF Export (CA11 of 1.4.3)
+    const handleExportPDF = () => {
+        if (!extrato) return;
+        const w = window.open('', '_blank');
+        if (!w) return;
+        w.document.write(`
+            <html><head><title>Extrato - ${usuario?.pseudonimo}</title>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px; color: #1e293b; }
+                h1 { color: #2563eb; border-bottom: 2px solid #2563eb; padding-bottom: 8px; }
+                h2 { color: #334155; margin-top: 24px; }
+                table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+                th, td { padding: 8px 12px; border: 1px solid #e2e8f0; text-align: left; font-size: 13px; }
+                th { background: #f1f5f9; font-weight: 600; }
+                .positive { color: #10b981; font-weight: 700; }
+                .negative { color: #ef4444; font-weight: 700; }
+                .footer { margin-top: 40px; font-size: 11px; color: #94a3b8; }
+            </style></head><body>
+            <h1>📄 Extrato de Atividades</h1>
+            <p><strong>Usuário:</strong> ${usuario?.pseudonimo} | <strong>Nível:</strong> ${usuario?.nivel} | <strong>Pontos:</strong> ${usuario?.pontuacao}</p>
+            <h2>Relatos</h2>
+            <table><thead><tr><th>Título</th><th>Data</th><th>Status</th><th>Score</th></tr></thead><tbody>
+            ${extrato.incidentes.map((i: any) => `<tr><td>${i.titulo}</td><td>${new Date(i.criadoEm).toLocaleDateString('pt-BR')}</td><td>${i.status}</td><td>${i.scoreVeracidade}</td></tr>`).join('')}
+            </tbody></table>
+            <h2>Histórico de Pontos</h2>
+            <table><thead><tr><th>Ação</th><th>Data</th><th>Pontos</th></tr></thead><tbody>
+            ${extrato.registros.map((r: any) => `<tr><td>${r.motivo.replace(/_/g, ' ')}</td><td>${new Date(r.criadoEm).toLocaleString('pt-BR')}</td><td class="${r.pontos > 0 ? 'positive' : 'negative'}">${r.pontos > 0 ? '+' : ''}${r.pontos}</td></tr>`).join('')}
+            </tbody></table>
+            <div class="footer">Gerado em ${new Date().toLocaleString('pt-BR')} | Comunidade Segura</div>
+            </body></html>
+        `);
+        w.document.close();
+        w.print();
+    };
+
     if (!isAuthenticated || !usuario) return null;
 
     const tabs = [
@@ -73,6 +180,7 @@ function ProfileContent() {
         { id: 'reputacao', label: 'Reputação', icon: Award },
         { id: 'extrato', label: 'Extrato', icon: FileText },
         { id: 'ranking', label: 'Ranking', icon: Trophy },
+        { id: 'seguranca', label: 'Segurança', icon: Lock },
     ];
 
     const containerStyle: React.CSSProperties = {
@@ -105,7 +213,7 @@ function ProfileContent() {
                         width: 72,
                         height: 72,
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                        background: photoPreview || usuario.fotoPerfil ? 'transparent' : 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -113,8 +221,26 @@ function ProfileContent() {
                         fontWeight: 700,
                         fontSize: 28,
                         flexShrink: 0,
-                    }}>
-                        {usuario.pseudonimo.charAt(0).toUpperCase()}
+                        position: 'relative' as const,
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        border: dragActive ? '2px dashed var(--primary-color)' : 'none',
+                    }}
+                        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                        onDragLeave={() => setDragActive(false)}
+                        onDrop={handlePhotoDrop}
+                        onClick={() => document.getElementById('photo-input')?.click()}
+                        title="Clique ou arraste uma foto">
+                        {photoPreview || usuario.fotoPerfil ? (
+                            <img src={photoPreview || usuario.fotoPerfil} alt="Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            usuario.pseudonimo.charAt(0).toUpperCase()
+                        )}
+                        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.5)', padding: 2, textAlign: 'center' }}>
+                            <Camera size={12} />
+                        </div>
+                        <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }}
+                            onChange={(e) => { if (e.target.files?.[0]) processPhoto(e.target.files[0]); }} />
                     </div>
                     <div style={{ flex: 1 }}>
                         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -309,7 +435,13 @@ function ProfileContent() {
 
                 {activeTab === 'extrato' && extrato && (
                     <div style={cardStyle}>
-                        <h2 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 600 }}>Extrato de Atividades</h2>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Extrato de Atividades</h2>
+                            <button onClick={handleExportPDF}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, background: 'rgba(59,130,246,0.1)', color: 'var(--primary-color)', fontWeight: 500, fontSize: 13, border: 'none', cursor: 'pointer' }}>
+                                <Download size={14} /> Exportar PDF
+                            </button>
+                        </div>
                         {/* My Incidents */}
                         <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Meus Relatos</h3>
                         {extrato.incidentes.length > 0 ? (
@@ -429,6 +561,79 @@ function ProfileContent() {
                         ) : (
                             <p style={{ color: 'var(--text-secondary)' }}>Nenhum ranking disponível ainda.</p>
                         )}
+                    </div>
+                )}
+
+                {/* Security Tab - 2FA (CA10 of 1.6.1) */}
+                {activeTab === 'seguranca' && (
+                    <div style={cardStyle}>
+                        <h2 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Lock size={20} /> Segurança da Conta
+                        </h2>
+
+                        <div style={{ padding: 20, background: 'var(--bg-primary)', borderRadius: 12, marginBottom: 16, border: '1px solid var(--glass-border)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                <div>
+                                    <div style={{ fontWeight: 600, fontSize: 15 }}>Autenticação de Dois Fatores (2FA)</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Adicione uma camada extra de segurança usando um app autenticador (Google Authenticator, Authy, etc)</div>
+                                </div>
+                                <span style={{
+                                    padding: '4px 12px', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 600,
+                                    background: is2FAEnabled ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                                    color: is2FAEnabled ? '#10b981' : '#ef4444',
+                                }}>{is2FAEnabled ? 'Ativado' : 'Desativado'}</span>
+                            </div>
+
+                            {!is2FAEnabled && !show2FASetup && (
+                                <button onClick={handle2FASetup}
+                                    style={{ padding: '10px 20px', background: 'var(--primary-color)', color: 'white', borderRadius: 8, fontWeight: 600, border: 'none', cursor: 'pointer', fontSize: 13 }}>
+                                    Ativar 2FA
+                                </button>
+                            )}
+
+                            {show2FASetup && (
+                                <div style={{ marginTop: 12 }}>
+                                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                                        1. Escaneie o QR Code abaixo no seu app autenticador:<br />
+                                        2. Digite o código de 6 dígitos gerado para confirmar.
+                                    </p>
+                                    {qrCodeUrl && (
+                                        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                                            <img src={qrCodeUrl} alt="QR Code 2FA" style={{ width: 200, height: 200, borderRadius: 8, background: 'white', padding: 8 }} />
+                                        </div>
+                                    )}
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                        <input value={totpCode} onChange={(e) => setTotpCode(e.target.value)}
+                                            placeholder="Código de 6 dígitos" maxLength={6}
+                                            style={{ flex: 1, padding: 12, background: 'var(--bg-surface)', border: '1px solid var(--glass-border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 16, letterSpacing: 4, textAlign: 'center', fontWeight: 700 }} />
+                                        <button onClick={handle2FAVerify}
+                                            style={{ padding: '12px 24px', background: '#10b981', color: 'white', borderRadius: 8, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+                                            Confirmar
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {is2FAEnabled && (
+                                <div style={{ marginTop: 12 }}>
+                                    <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>Para desativar, confirme sua senha:</p>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <input type="password" value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)}
+                                            placeholder="Sua senha atual"
+                                            style={{ flex: 1, padding: 10, background: 'var(--bg-surface)', border: '1px solid var(--glass-border)', borderRadius: 8, color: 'var(--text-primary)', fontSize: 14 }} />
+                                        <button onClick={handle2FADisable}
+                                            style={{ padding: '10px 20px', background: '#ef4444', color: 'white', borderRadius: 8, fontWeight: 600, border: 'none', cursor: 'pointer', fontSize: 13 }}>
+                                            Desativar
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div style={{ padding: 16, background: 'var(--bg-primary)', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+                            <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>Sessões Ativas</div>
+                            <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Gerencie suas sessões ativas na página de perfil.</p>
+                        </div>
                     </div>
                 )}
             </div>

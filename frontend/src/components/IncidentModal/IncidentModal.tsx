@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, MapPin, Camera, AlertTriangle, Upload, Trash2 } from 'lucide-react';
 import styles from './IncidentModal.module.css';
+import api from '@/services/api';
 
 interface IncidentModalProps {
     isOpen: boolean;
@@ -21,6 +22,7 @@ export default function IncidentModal({ isOpen, onClose, onSubmit, initialLocati
     const [files, setFiles] = useState<File[]>([]);
     const [previews, setPreviews] = useState<string[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [endereco, setEndereco] = useState<string>('');
 
     // Update location when initialLocation changes
     useEffect(() => {
@@ -30,6 +32,8 @@ export default function IncidentModal({ isOpen, onClose, onSubmit, initialLocati
                 lat: initialLocation[0],
                 lng: initialLocation[1],
             }));
+            // CA06 (1.2.1): Reverse Geocoding - get address from coordinates
+            api.reverseGeocode(initialLocation[0], initialLocation[1]).then(setEndereco);
         }
     }, [initialLocation]);
 
@@ -230,11 +234,18 @@ export default function IncidentModal({ isOpen, onClose, onSubmit, initialLocati
                                 <label>Localização</label>
                                 <div className={styles.locationBox}>
                                     <MapPin size={20} color="var(--primary-color)" />
-                                    <span style={{ flex: 1 }}>
-                                        {initialLocation
-                                            ? `${initialLocation[0].toFixed(5)}, ${initialLocation[1].toFixed(5)}`
-                                            : 'Clique no mapa para definir...'}
-                                    </span>
+                                    <div style={{ flex: 1 }}>
+                                        <span>
+                                            {initialLocation
+                                                ? `${initialLocation[0].toFixed(5)}, ${initialLocation[1].toFixed(5)}`
+                                                : 'Clique no mapa para definir...'}
+                                        </span>
+                                        {endereco && (
+                                            <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>
+                                                📍 {endereco}
+                                            </div>
+                                        )}
+                                    </div>
                                     {initialLocation && (
                                         <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', fontWeight: 600 }}>
                                             ✓ Definido

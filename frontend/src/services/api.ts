@@ -86,6 +86,23 @@ class ApiService {
         return this.request(`/auth/sessions/${id}`, { method: 'DELETE' });
     }
 
+    // ═══ 2FA ═══
+    async setup2FA() {
+        return this.request('/auth/2fa/setup', { method: 'POST' });
+    }
+
+    async verify2FA(code: string) {
+        return this.request('/auth/2fa/verify', { method: 'POST', body: JSON.stringify({ code }) });
+    }
+
+    async disable2FA(senha: string) {
+        return this.request('/auth/2fa/disable', { method: 'POST', body: JSON.stringify({ senha }) });
+    }
+
+    async verifyPassword(senha: string) {
+        return this.request('/auth/verify-password', { method: 'POST', body: JSON.stringify({ senha }) });
+    }
+
     // ═══ Incidentes ═══
     async getMapData(bounds: { minLat: number; maxLat: number; minLng: number; maxLng: number }, categorias?: string) {
         const params = new URLSearchParams({
@@ -239,10 +256,10 @@ class ApiService {
         return this.request(`/admin/usuarios?${params}`);
     }
 
-    async changeUserRole(userId: number, role: string) {
+    async changeUserRole(userId: number, role: string, senhaConfirmacao: string) {
         return this.request(`/admin/usuarios/${userId}/role`, {
             method: 'PUT',
-            body: JSON.stringify({ role }),
+            body: JSON.stringify({ role, senhaConfirmacao }),
         });
     }
 
@@ -251,6 +268,23 @@ class ApiService {
             method: 'POST',
             body: JSON.stringify({ incidenteId, motivo }),
         });
+    }
+
+    // ═══ Reverse Geocoding (CA06 of 1.2.1) ═══
+    async reverseGeocode(lat: number, lng: number): Promise<string> {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=pt-BR`, {
+                headers: { 'User-Agent': 'ComunidadeSegura/1.0' },
+            });
+            const data = await res.json();
+            if (data.address) {
+                const { road, suburb, city, state } = data.address;
+                return [road, suburb, city, state].filter(Boolean).join(', ');
+            }
+            return data.display_name || 'Endereço não encontrado';
+        } catch {
+            return 'Não foi possível obter o endereço';
+        }
     }
 }
 

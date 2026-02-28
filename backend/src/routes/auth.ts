@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { authenticator } from 'otplib';
+import * as QRCode from 'qrcode';
 import { autenticar } from '../middleware/auth';
 import {
     JWT_SECRET, JWT_EXPIRES_IN, BCRYPT_ROUNDS,
@@ -499,6 +501,99 @@ router.delete('/sessions/:id', autenticar, async (req: Request, res: Response) =
         res.json({ mensagem: 'Sessão encerrada.' });
     } catch (error) {
         res.status(500).json({ error: 'Erro ao encerrar sessão.' });
+    }
+});
+
+/**
+ * POST /api/auth/2fa/setup - Generate 2FA secret and QR code (CA10 of 1.6.1)
+ */
+router.post('/2fa/setup', autenticar, async (req: Request, res: Response) => {
+    try {
+        const secret = authenticator.generateSecret();
+        const otpauthUrl = authenticator.keyuri(req.usuario!.email, 'ComunidadeSegura', secret);
+        const qrCodeUrl = await QRCode.toDataURL(otpauthUrl);
+
+        // Store secret temporarily (not enabled yet)
+        await prisma.usuario.update({
+            where: { id: req.usuario!.id },
+            data: { twoFactorSecret: secret },
+        });
+
+        res.json({ secret, qrCodeUrl });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao configurar 2FA.' });
+    }
+});
+
+/**
+ * POST /api/auth/2fa/verify - Verify TOTP code and enable 2FA
+ */
+router.post('/2fa/verify', autenticar, async (req: Request, res: Response) => {
+    try {
+        const { code } = req.body;
+        const usuario = await prisma.usuario.findUnique({ where: { id: req.usuario!.id } });
+        if (!usuario?.twoFactorSecret) {
+            return res.status(400).json({ error: 'Configure o 2FA primeiro.' });
+        }
+
+        const isValid = authenticator.verify({ token: code, secret: usuario.twoFactorSecret });
+        if (!isValid) {
+            return res.status(400).json({ error: 'Código inválido. Tente novamente.' });
+        }
+
+        await prisma.usuario.update({
+            where: { id: req.usuario!.id },
+            data: { twoFactorEnabled: true },
+        });
+
+        res.json({ mensagem: 'Autenticação de dois fatores ativada com sucesso!' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao verificar 2FA.' });
+    }
+});
+
+/**
+ * POST /api/auth/2fa/disable - Disable 2FA (requires password)
+ */
+router.post('/2fa/disable', autenticar, async (req: Request, res: Response) => {
+    try {
+        const { senha } = req.body;
+        const usuario = await prisma.usuario.findUnique({ where: { id: req.usuario!.id } });
+        if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+        const senhaValida = await bcrypt.compare(senha, usuario.senhaHash);
+        if (!senhaValida) {
+            return res.status(401).json({ error: 'Senha incorreta.' });
+        }
+
+        await prisma.usuario.update({
+            where: { id: req.usuario!.id },
+            data: { twoFactorEnabled: false, twoFactorSecret: null },
+        });
+
+        res.json({ mensagem: '2FA desativado.' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao desativar 2FA.' });
+    }
+});
+
+/**
+ * POST /api/auth/verify-password - Verify current password (for admin confirmations)
+ */
+router.post('/verify-password', autenticar, async (req: Request, res: Response) => {
+    try {
+        const { senha } = req.body;
+        const usuario = await prisma.usuario.findUnique({ where: { id: req.usuario!.id } });
+        if (!usuario) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+        const valida = await bcrypt.compare(senha, usuario.senhaHash);
+        if (!valida) {
+            return res.status(401).json({ error: 'Senha incorreta.' });
+        }
+
+        res.json({ valido: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao verificar senha.' });
     }
 });
 

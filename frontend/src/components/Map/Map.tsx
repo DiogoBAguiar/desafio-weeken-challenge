@@ -95,9 +95,18 @@ export default function AppMap() {
     const [incidents, setIncidents] = useState<any[]>([]);
     const [events, setEvents] = useState<any[]>([]);
     const [heatPoints, setHeatPoints] = useState<[number, number, number][]>([]);
-    const [position, setPosition] = useState<[number, number]>([-7.11532, -34.86105]);
+
+    // CA11 (1.3.2): Read URL params for zone centering
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const urlLat = urlParams?.get('lat');
+    const urlLng = urlParams?.get('lng');
+    const urlZoom = urlParams?.get('zoom');
+
+    const [position, setPosition] = useState<[number, number]>(
+        urlLat && urlLng ? [parseFloat(urlLat), parseFloat(urlLng)] : [-7.11532, -34.86105]
+    );
     const [userPos, setUserPos] = useState<[number, number] | null>(null);
-    const [zoom, setZoom] = useState(13);
+    const [zoom, setZoom] = useState(urlZoom ? parseInt(urlZoom) : 13);
     const [isLocating, setIsLocating] = useState(false);
     const [isOnline, setIsOnline] = useState(true);
 
@@ -137,6 +146,10 @@ export default function AppMap() {
         if (isMounted) {
             localStorage.setItem("cs_filters", JSON.stringify(filters));
             localStorage.setItem("cs_heatmap", showHeatmap.toString());
+        }
+        // CA11 (1.1.3): Auto-hide heatmap when Events filter is selected alone
+        if (filters.EVENT && !filters.CRITICAL && !filters.WARNING) {
+            setShowHeatmap(false);
         }
     }, [filters, showHeatmap, isMounted]);
 
@@ -199,10 +212,18 @@ export default function AppMap() {
             },
             (err) => {
                 setIsLocating(false);
-                showToast(
-                    "Não foi possível acessar sua localização. Verifique as permissões do navegador nas configurações.",
-                    "warning"
-                );
+                // CA04 (1.1.4): Instruction on how to re-enable permission
+                if (err.code === err.PERMISSION_DENIED) {
+                    showToast(
+                        "Localização bloqueada. Para ativar: clique no ícone de cadeado na barra de endereço do navegador e permita o acesso à localização.",
+                        "warning"
+                    );
+                } else {
+                    showToast(
+                        "Não foi possível obter sua localização. Tente novamente.",
+                        "warning"
+                    );
+                }
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
@@ -227,6 +248,10 @@ export default function AppMap() {
                     maxLng: b.getEast(),
                 };
                 loadMapData();
+            },
+            // CA12 (1.1.4): Disable auto-tracking when user drags map manually
+            dragstart() {
+                setUserPos(null);
             },
         });
         return null;
@@ -506,27 +531,33 @@ export default function AppMap() {
 
             {/* Filter Menu */}
             {showFiltersMenu && (
-                <div className={styles.filterMenu}>
+                <div className={styles.filterMenu} role="dialog" aria-label="Filtros do mapa" tabIndex={-1}>
                     <div className={styles.filterHeader}>
-                        <span>Filtros e Camadas</span>
-                        <button className={styles.closeButton} onClick={() => setShowFiltersMenu(false)}>
+                        <span id="filter-menu-title">Filtros e Camadas</span>
+                        <button className={styles.closeButton} onClick={() => setShowFiltersMenu(false)}
+                            aria-label="Fechar filtros" tabIndex={0}>
                             <X size={18} />
                         </button>
                     </div>
 
-                    <div className={styles.filterList}>
+                    <div className={styles.filterList} role="group" aria-labelledby="filter-menu-title">
                         {[
                             { key: "CRITICAL" as CategoryType, label: "Crimes Violentos", color: "#ef4444" },
                             { key: "WARNING" as CategoryType, label: "Furtos e Riscos", color: "#f59e0b" },
                             { key: "EVENT" as CategoryType, label: "Eventos Comunitários", color: "#3b82f6" },
                         ].map((f) => (
-                            <label key={f.key} className={styles.filterItem}>
+                            <label key={f.key} className={styles.filterItem}
+                                tabIndex={0} role="checkbox" aria-checked={filters[f.key]}
+                                aria-label={`Filtro ${f.label} (${categoryCount[f.key]} ocorrências)`}
+                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilters(prev => ({ ...prev, [f.key]: !prev[f.key] })); } }}>
                                 <div className={styles.filterLabel}>
                                     <input
                                         type="checkbox"
                                         className={styles.filterCheckbox}
                                         checked={filters[f.key]}
                                         onChange={(e) => setFilters((prev) => ({ ...prev, [f.key]: e.target.checked }))}
+                                        aria-label={f.label}
+                                        tabIndex={-1}
                                     />
                                     <div className={styles.legendColor} style={{ backgroundColor: f.color, width: 10, height: 10 }} />
                                     <span>{f.label}</span>
@@ -536,11 +567,13 @@ export default function AppMap() {
                         ))}
                     </div>
 
-                    <div className={styles.filterActions}>
-                        <button className={styles.actionButton} onClick={() => setFilters({ CRITICAL: true, WARNING: true, EVENT: true })}>
+                    <div className={styles.filterActions} role="group" aria-label="Ações de filtro">
+                        <button className={styles.actionButton} onClick={() => setFilters({ CRITICAL: true, WARNING: true, EVENT: true })}
+                            aria-label="Selecionar todas as categorias" tabIndex={0}>
                             Todos
                         </button>
-                        <button className={styles.actionButton} onClick={() => setFilters({ CRITICAL: false, WARNING: false, EVENT: false })}>
+                        <button className={styles.actionButton} onClick={() => setFilters({ CRITICAL: false, WARNING: false, EVENT: false })}
+                            aria-label="Limpar todos os filtros" tabIndex={0}>
                             Limpar
                         </button>
                     </div>
