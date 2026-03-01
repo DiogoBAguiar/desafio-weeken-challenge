@@ -3,7 +3,7 @@ import cors, { CorsOptions } from 'cors';
 import path from 'path';
 
 // Importação das rotas
-import rotasAutenticacao from './routes/auth';
+import rotasAutenticacao from './modulos/identidade/rotas-identidade';
 import rotasIncidentes from './routes/incidentes';
 import rotasEventos from './routes/eventos';
 import rotasNotificacoes from './routes/notificacoes';
@@ -40,7 +40,7 @@ class ConfiguracaoCorsNuvem implements IProvedorSegurancaWeb {
         // Integração de variáveis de ambiente para garantir escalabilidade
         // O domínio da Vercel deve ser passado via painel de controlo
         const dominioProducao = process.env.URL_FRONTEND_PRODUCAO || 'https://comunidade-viva-3r8e5qe71-diogobaguiars-projects.vercel.app';
-        
+
         this.dominiosAutorizados = [
             'http://localhost:3000',
             'http://localhost:3001',
@@ -67,7 +67,7 @@ class ConfiguracaoCorsNuvem implements IProvedorSegurancaWeb {
 class OrquestradorDeRotas implements IGestorDeRotas {
     public registarRotas(aplicacao: Application): void {
         aplicacao.get('/api/health', this.controladorEstadoSaude);
-        
+
         // Mapeamento modular de domínios
         aplicacao.use('/api/auth', rotasAutenticacao);
         aplicacao.use('/api/incidentes', rotasIncidentes);
@@ -75,15 +75,15 @@ class OrquestradorDeRotas implements IGestorDeRotas {
         aplicacao.use('/api/notificacoes', rotasNotificacoes);
         aplicacao.use('/api/gamificacao', rotasGamificacao);
         aplicacao.use('/api/admin', rotasAdministracao);
-        
+
         // Registo de interrutor de falhas
         aplicacao.use(this.tratamentoGlobalExcecoes);
     }
 
     private controladorEstadoSaude(requisicao: Request, resposta: Response): void {
-        resposta.status(200).json({ 
-            estado: 'Operacional', 
-            marcaDeTempo: new Date().toISOString(), 
+        resposta.status(200).json({
+            estado: 'Operacional',
+            marcaDeTempo: new Date().toISOString(),
             versao: '2.0.0',
             ambiente: process.env.VERCEL ? 'Nuvem' : 'Local'
         });
@@ -109,7 +109,7 @@ class ServidorComunidadeSegura implements IServidorAplicacao {
         this.aplicacaoInterna = express();
         this.segurancaWeb = segurancaWeb;
         this.gestorRotas = gestorRotas;
-        
+
         this.configurarIntermediarios();
         this.gestorRotas.registarRotas(this.aplicacaoInterna);
     }
@@ -118,7 +118,7 @@ class ServidorComunidadeSegura implements IServidorAplicacao {
         this.aplicacaoInterna.use(cors(this.segurancaWeb.obterPoliticasAcesso()));
         this.aplicacaoInterna.use(express.json({ limit: '10mb' }));
         this.aplicacaoInterna.use(express.urlencoded({ extended: true }));
-        
+
         // Ficheiros estáticos (Nota: Na Vercel, o sistema de ficheiros é efémero)
         this.aplicacaoInterna.use('/uploads', express.static(path.join(__dirname, '../uploads')));
     }

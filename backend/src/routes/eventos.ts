@@ -136,7 +136,7 @@ router.post('/', autenticar, reputacaoMinima('Colaborador'), async (req: Request
  */
 router.post('/:id/rsvp', autenticar, async (req: Request, res: Response) => {
     try {
-        const eventoId = parseInt(req.params.id);
+        const eventoId = parseInt(req.params.id as string);
         const { tipo } = req.body;
 
         const evento = await prisma.evento.findUnique({
@@ -181,7 +181,7 @@ router.post('/:id/rsvp', autenticar, async (req: Request, res: Response) => {
  */
 router.put('/:id', autenticar, async (req: Request, res: Response) => {
     try {
-        const evento = await prisma.evento.findUnique({ where: { id: parseInt(req.params.id) } });
+        const evento = await prisma.evento.findUnique({ where: { id: parseInt(req.params.id as string) } });
 
         if (!evento || evento.autorId !== req.usuario!.id) {
             return res.status(403).json({ error: 'Sem permissão para editar este evento.' });

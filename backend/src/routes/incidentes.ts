@@ -275,7 +275,7 @@ router.post('/', autenticar, async (req: Request, res: Response) => {
 router.get('/:id', autenticarOpcional, async (req: Request, res: Response) => {
     try {
         const incidente = await prisma.incidente.findUnique({
-            where: { id: parseInt(req.params.id) },
+            where: { id: parseInt(req.params.id as string) },
             include: {
                 autor: { select: { pseudonimo: true, nivel: true, fotoPerfil: true } },
                 votos: {
@@ -318,7 +318,7 @@ router.get('/:id', autenticarOpcional, async (req: Request, res: Response) => {
  */
 router.put('/:id', autenticar, async (req: Request, res: Response) => {
     try {
-        const incidente = await prisma.incidente.findUnique({ where: { id: parseInt(req.params.id) } });
+        const incidente = await prisma.incidente.findUnique({ where: { id: parseInt(req.params.id as string) } });
 
         if (!incidente) {
             return res.status(404).json({ error: 'Incidente não encontrado.' });
@@ -373,7 +373,7 @@ router.put('/:id', autenticar, async (req: Request, res: Response) => {
  */
 router.delete('/:id', autenticar, async (req: Request, res: Response) => {
     try {
-        const incidente = await prisma.incidente.findUnique({ where: { id: parseInt(req.params.id) } });
+        const incidente = await prisma.incidente.findUnique({ where: { id: parseInt(req.params.id as string) } });
 
         if (!incidente) {
             return res.status(404).json({ error: 'Incidente não encontrado.' });
@@ -420,7 +420,7 @@ router.delete('/:id', autenticar, async (req: Request, res: Response) => {
  */
 router.post('/:id/votar', autenticar, async (req: Request, res: Response) => {
     try {
-        const incidenteId = parseInt(req.params.id);
+        const incidenteId = parseInt(req.params.id as string);
         const { tipo, latitude, longitude } = req.body;
 
         if (!['CONFIRMAR', 'NAO_PROCEDE'].includes(tipo)) {

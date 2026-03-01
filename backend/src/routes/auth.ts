@@ -492,7 +492,7 @@ router.delete('/sessions/:id', autenticar, async (req: Request, res: Response) =
     try {
         await prisma.sessao.updateMany({
             where: {
-                id: parseInt(req.params.id),
+                id: parseInt(req.params.id as string),
                 usuarioId: req.usuario!.id,
             },
             data: { ativo: false },

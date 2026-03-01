@@ -59,7 +59,7 @@ router.put('/read-all', autenticar, async (req: Request, res: Response) => {
 router.put('/:id/read', autenticar, async (req: Request, res: Response) => {
     try {
         await prisma.notificacao.update({
-            where: { id: parseInt(req.params.id) },
+            where: { id: parseInt(req.params.id as string) },
             data: { lida: true },
         });
         res.json({ mensagem: 'Notificação lida.' });
@@ -139,7 +139,7 @@ router.post('/zonas', autenticar, async (req: Request, res: Response) => {
 router.put('/zonas/:id', autenticar, async (req: Request, res: Response) => {
     try {
         const zona = await prisma.zonaInteresse.findFirst({
-            where: { id: parseInt(req.params.id), usuarioId: req.usuario!.id },
+            where: { id: parseInt(req.params.id as string), usuarioId: req.usuario!.id },
         });
         if (!zona) return res.status(404).json({ error: 'Zona não encontrada.' });
 
@@ -160,7 +160,7 @@ router.put('/zonas/:id', autenticar, async (req: Request, res: Response) => {
 router.delete('/zonas/:id', autenticar, async (req: Request, res: Response) => {
     try {
         await prisma.zonaInteresse.deleteMany({
-            where: { id: parseInt(req.params.id), usuarioId: req.usuario!.id },
+            where: { id: parseInt(req.params.id as string), usuarioId: req.usuario!.id },
         });
         res.json({ mensagem: 'Zona removida.' });
     } catch (error) {
