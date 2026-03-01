@@ -144,10 +144,16 @@ function OuvinteIteracoesMapa({
 }: PropriedadesOuvinteMapa): null {
     const controleMapaLeaflet = useMapEvents({
         click(eventoClique) {
+            console.log("Cliquei no mapa!", eventoClique.latlng); // <-- Adicionado para testar
+
+            // SE VOCÊ NÃO ESTIVER LOGADO, COMENTE ESTE BLOCO:
+            /*
             if (!estaAutenticado) {
                 notificar("Autenticação requerida para novos registros.", "alerta");
                 return;
             }
+            */
+
             aoClicar([eventoClique.latlng.lat, eventoClique.latlng.lng]);
         },
         moveend() {

@@ -11,6 +11,7 @@ import {
 import * as ComponenteDialogo from '@radix-ui/react-dialog';
 import estilosVisuais from './IncidentModal.module.css';
 import servicoApi from '@/shared/lib/api';
+import { DicionarioCategorias } from '@/shared/domain/DicionarioCategorias';
 
 // ============================================================================
 // 1. Contratos e Interfaces
@@ -35,7 +36,7 @@ interface DadosOcorrencia {
 // 2. Classes de Domínio e Dicionários Estáticos
 // ============================================================================
 
-import { DicionarioCategorias } from '@/shared/domain/DicionarioCategorias';
+// Importação movida para o topo do arquivo pelas regras do ES6/Next.js
 
 // ============================================================================
 // 3. Componente Principal
@@ -79,7 +80,7 @@ export default function ModalRegistroIncidente({
     }, [initialLocation]);
 
     // Retorno preventivo (Early Return)
-    if (!isOpen) return null;
+    // if (!isOpen) return null;
 
     // ------------------------------------------------------------------------
     // Processamento Lógico e Regras de Negócio
@@ -175,8 +176,8 @@ export default function ModalRegistroIncidente({
     return (
         <ComponenteDialogo.Root open={isOpen} onOpenChange={(aberto) => !aberto && onClose()}>
             <ComponenteDialogo.Portal>
-                <ComponenteDialogo.Overlay className={estilosVisuais.overlay} />
-                <ComponenteDialogo.Content className={estilosVisuais.modal}>
+                <ComponenteDialogo.Overlay className={estilosVisuais.overlay} style={{ zIndex: 9999 }} />
+                <ComponenteDialogo.Content className={estilosVisuais.modal} style={{ zIndex: 10000 }}>
 
                     <div className={estilosVisuais.header}>
                         <ComponenteDialogo.Title style={{ fontSize: 20, fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>
