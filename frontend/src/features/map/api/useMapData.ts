@@ -67,3 +67,15 @@ export const useCreateIncident = () => {
         },
     });
 };
+
+export const useCreateEvento = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: any) => api.createEvent(data),
+        onSuccess: () => {
+            // Se houver uma query específica para eventos, invalide aqui.
+            // Para garantir que o mapa sincronize, invalidamos ambos.
+            queryClient.invalidateQueries({ queryKey: ['incidents'] });
+        },
+    });
+};
