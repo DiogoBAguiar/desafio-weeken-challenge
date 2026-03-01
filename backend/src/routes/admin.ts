@@ -42,13 +42,13 @@ router.get('/dashboard/stats', autenticar, autorizar(ROLES.ADMIN, ROLES.ORGAO_SE
 
         // CA08: Category distribution (Pie Chart data)
         const distribuicao: Record<string, number> = {};
-        incidentes.forEach(inc => {
+        incidentes.forEach((inc: any) => {
             distribuicao[inc.categoria] = (distribuicao[inc.categoria] || 0) + 1;
         });
 
         // CA04: Time series data (daily counts)
         const serieTemporal: Record<string, number> = {};
-        incidentes.forEach(inc => {
+        incidentes.forEach((inc: any) => {
             const dia = new Date(inc.criadoEm).toISOString().split('T')[0];
             serieTemporal[dia] = (serieTemporal[dia] || 0) + 1;
         });
@@ -69,7 +69,7 @@ router.get('/dashboard/stats', autenticar, autorizar(ROLES.ADMIN, ROLES.ORGAO_SE
             },
             distribuicao,
             serieTemporal,
-            pontos: incidentes.map(inc => ({
+            pontos: incidentes.map((inc: any) => ({
                 lat: inc.latitude,
                 lng: inc.longitude,
                 categoria: inc.categoria,
@@ -109,7 +109,7 @@ router.get('/dashboard/export', autenticar, autorizar(ROLES.ADMIN, ROLES.ORGAO_S
 
         if (formato === 'csv') {
             const headers = 'id,categoria,severidade,latitude,longitude,criadoEm,scoreVeracidade,status\n';
-            const csv = headers + dados.map(d =>
+            const csv = headers + dados.map((d: any) =>
                 `${d.id},${d.categoria},${d.severidade},${d.latitude},${d.longitude},${d.criadoEm.toISOString()},${d.scoreVeracidade},${d.status}`
             ).join('\n');
             res.setHeader('Content-Type', 'text/csv');
@@ -149,7 +149,7 @@ router.get('/moderacao', autenticar, autorizar(ROLES.ADMIN, ROLES.MODERADOR, ROL
 
         // Group by incident and count
         const agrupados: Record<number, any> = {};
-        denuncias.forEach(d => {
+        denuncias.forEach((d: any) => {
             if (!agrupados[d.incidenteId]) {
                 agrupados[d.incidenteId] = {
                     incidente: d.incidente,
@@ -429,7 +429,7 @@ router.get('/auditoria/export', autenticar, autorizar(ROLES.ADMIN), async (req: 
 
         if (formato === 'csv') {
             const headers = 'id,usuarioId,nomeUsuario,acao,modulo,detalhes,ipOrigem,userAgent,criadoEm\n';
-            const csv = headers + logs.map(l =>
+            const csv = headers + logs.map((l: any) =>
                 `${l.id},${l.usuarioId || ''},${l.nomeUsuario || ''},${l.acao},${l.modulo},"${(l.detalhes || '').replace(/"/g, '""')}",${l.ipOrigem || ''},${l.userAgent || ''},${l.criadoEm.toISOString()}`
             ).join('\n');
             res.setHeader('Content-Type', 'text/csv');
