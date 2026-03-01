@@ -71,7 +71,7 @@ router.get('/mapa', autenticarOpcional, async (req: Request, res: Response) => {
 
         // CA04 (1.1.1): Mark incidents less than 30 min old as pulsing
         const agora = new Date();
-        const resultado = incidentes.map(inc => ({
+        const resultado = incidentes.map((inc: any) => ({
             ...inc,
             pulsando: CRITICAL_CATEGORIES.includes(inc.categoria) &&
                 (agora.getTime() - new Date(inc.criadoEm).getTime()) < 30 * 60 * 1000,
@@ -121,7 +121,7 @@ router.get('/heatmap', async (req: Request, res: Response) => {
         });
 
         // CA08: Apply jitter to protect privacy
-        const heatPoints = incidentes.map(inc => {
+        const heatPoints = incidentes.map((inc: any) => {
             const [lat, lng] = aplicarJitter(inc.latitude, inc.longitude);
             const intensity = inc.severidade === 'CRITICA' || inc.severidade === 'ALTA' ? 1.0 : 0.5;
             return [lat, lng, intensity];
