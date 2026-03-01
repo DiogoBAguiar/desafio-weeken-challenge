@@ -42,31 +42,65 @@ export default function Sidebar() {
 
     return (
         <>
-            {/* Mobile toggle */}
-            <button
-                onClick={() => setCollapsed(!collapsed)}
-                style={{
-                    position: 'fixed',
-                    top: 16,
-                    left: 16,
-                    zIndex: 2001,
-                    background: 'var(--glass-bg)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid var(--glass-border)',
-                    borderRadius: 'var(--radius-full)',
-                    width: 44,
-                    height: 44,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: 'var(--shadow-md)',
-                    color: 'var(--text-primary)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                }}
-            >
-                {collapsed ? <Menu size={20} /> : <X size={20} />}
-            </button>
+            {/* Mobile toggle (Apenas a pílula flutuante visível quando fechada) */}
+            <div style={{
+                position: 'fixed',
+                top: 16,
+                left: 16,
+                zIndex: 2001,
+                display: 'flex',
+                alignItems: 'center',
+                background: 'var(--glass-bg)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border: '1px solid var(--glass-border)',
+                borderRadius: 'var(--radius-full)',
+                boxShadow: 'var(--shadow-md)',
+                padding: '4px 20px 4px 6px',
+                gap: 12,
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                pointerEvents: 'auto',
+                opacity: collapsed ? 1 : 0,
+                visibility: collapsed ? 'visible' : 'hidden', // Some ao abrir o menu
+            }}>
+                <button
+                    onClick={() => setCollapsed(false)}
+                    style={{
+                        background: 'transparent',
+                        border: 'none',
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                    }}
+                    title="Menu Principal"
+                >
+                    <Menu size={20} />
+                </button>
+
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', pointerEvents: 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{
+                            width: 8,
+                            height: 8,
+                            backgroundColor: 'var(--primary-color)',
+                            borderRadius: '50%',
+                            animation: 'pulse 2s infinite'
+                        }} />
+                        <h1 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px', lineHeight: 1.2 }}>
+                            Comunidade Viva
+                        </h1>
+                    </div>
+                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600, letterSpacing: '0.2px', textTransform: 'uppercase', lineHeight: 1.2 }}>
+                        Plataforma de Engajamento Urbano
+                    </span>
+                </div>
+            </div>
 
             {/* Overlay (mobile) */}
             {!collapsed && (
@@ -82,7 +116,7 @@ export default function Sidebar() {
                 />
             )}
 
-            {/* Sidebar */}
+            {/* Sidebar Principal (Ocupada quando não-colapsada) */}
             <nav style={{
                 position: 'fixed',
                 top: 0,
@@ -97,36 +131,56 @@ export default function Sidebar() {
                 transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 boxShadow: collapsed ? 'none' : '4px 0 24px rgba(0,0,0,0.15)',
             }}>
-                {/* Header */}
+
+                {/* Header fixo do menu lateral (contém X para fechar) */}
                 <div style={{
-                    padding: '24px 20px',
+                    padding: '20px 20px',
                     borderBottom: '1px solid var(--glass-border)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 12,
+                    justifyContent: 'space-between',
                 }}>
-                    <div style={{
-                        width: 36,
-                        height: 36,
-                        background: 'linear-gradient(135deg, var(--primary-color), #8b5cf6)',
-                        borderRadius: 10,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}>
-                        <Shield size={20} color="white" />
-                    </div>
-                    <div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>
-                            Comunidade Segura
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                            width: 36,
+                            height: 36,
+                            background: 'linear-gradient(135deg, var(--primary-color), #8b5cf6)',
+                            borderRadius: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <Shield size={20} color="white" />
                         </div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                            Mapeamento colaborativo
+                        <div>
+                            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
+                                Comunidade Viva
+                            </div>
+                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.2px' }}>
+                                Engajamento Urbano
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* User Card (if authenticated) */}
+                    <button
+                        onClick={() => setCollapsed(true)}
+                        style={{
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: 'none',
+                            color: '#ef4444',
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                        }}
+                        title="Recolher Menu"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
                 {isAuthenticated && usuario && (
                     <div style={{
                         padding: '16px 20px',

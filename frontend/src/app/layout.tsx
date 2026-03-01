@@ -17,9 +17,9 @@ import BarraLateral from "@/shared/components/Sidebar/Sidebar";
 // 2. Definição de Metadados (SEO e Configurações da Página)
 // -----------------------------------------------------------------------------
 const metadadosDaAplicacao: Metadata = {
-  title: "Comunidade Segura - Mapeamento colaborativo de segurança",
-  description: "Sistema colaborativo para mapeamento de segurança e eventos comunitários. Ajude a proteger sua vizinhança com relatos em tempo real.",
-  keywords: "segurança, comunidade, mapa, incidentes, João Pessoa, denúncia",
+  title: "Comunidade Viva - Plataforma de Engajamento Urbano",
+  description: "Plataforma de Engajamento Urbano. Ajude a melhorar a sua vizinhança com relatos em tempo real.",
+  keywords: "engajamento urbano, comunidade viva, mapa, cidade, zeladoria, denúncia",
 };
 
 // O Next.js exige estritamente a exportação de uma constante chamada 'metadata'.
@@ -42,23 +42,23 @@ export default function LayoutRaiz({ children }: PropriedadesLayoutRaiz): JSX.El
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link 
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" 
-            rel="stylesheet" 
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+          rel="stylesheet"
         />
       </head>
       <body>
         {/* Orquestração da Árvore de Provedores de Estado */}
         <ProvedorConsultas>
           <ProvedorAutenticacao>
-            
+
             <BarraLateral />
-            
+
             {/* O conteúdo dinâmico das rotas será injetado aqui */}
             {children}
-            
+
             <ContenedorNotificacoesGlobal />
-            
+
           </ProvedorAutenticacao>
         </ProvedorConsultas>
       </body>
