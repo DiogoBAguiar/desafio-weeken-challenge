@@ -59,7 +59,7 @@ function ProfileContent() {
                 setExtrato(ext);
             }
         } catch (err: any) {
-            apresentarNotificacao(err.message, 'error');
+            apresentarNotificacao(err.message, 'erro');
         } finally {
             setLoading(false);
         }
@@ -69,10 +69,10 @@ function ProfileContent() {
         try {
             const res = await api.updateProfile(editForm);
             updateUser(res.usuario);
-            apresentarNotificacao('Perfil atualizado!', 'success');
+            apresentarNotificacao('Perfil atualizado!', 'sucesso');
             setEditing(false);
         } catch (err: any) {
-            apresentarNotificacao(err.message, 'error');
+            apresentarNotificacao(err.message, 'erro');
         }
     };
 
@@ -83,7 +83,7 @@ function ProfileContent() {
             setQrCodeUrl(res.qrCodeUrl);
             setShow2FASetup(true);
         } catch (err: any) {
-            apresentarNotificacao(err.message, 'error');
+            apresentarNotificacao(err.message, 'erro');
         }
     };
 
@@ -93,9 +93,9 @@ function ProfileContent() {
             setIs2FAEnabled(true);
             setShow2FASetup(false);
             setTotpCode('');
-            apresentarNotificacao('2FA ativado com sucesso!', 'success');
+            apresentarNotificacao('2FA ativado com sucesso!', 'sucesso');
         } catch (err: any) {
-            apresentarNotificacao(err.message, 'error');
+            apresentarNotificacao(err.message, 'erro');
         }
     };
 
@@ -104,13 +104,13 @@ function ProfileContent() {
             await api.disable2FA(disablePassword);
             setIs2FAEnabled(false);
             setDisablePassword('');
-            apresentarNotificacao('2FA desativado.', 'success');
+            apresentarNotificacao('2FA desativado.', 'sucesso');
         } catch (err: any) {
-            apresentarNotificacao(err.message, 'error');
+            apresentarNotificacao(err.message, 'erro');
         }
     };
 
-    // Photo drag & drop (CA05 of 1.4.1)
+    // Photo drag & drop (CA05 of 1..1)
     const handlePhotoDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setDragActive(false);
@@ -121,11 +121,11 @@ function ProfileContent() {
     const processPhoto = (file: File) => {
         const allowed = ['image/jpeg', 'image/png', 'image/webp'];
         if (!allowed.includes(file.type)) {
-            apresentarNotificacao('Formato inválido. Use JPG, PNG ou WEBP.', 'error');
+            apresentarNotificacao('Formato inválido. Use JPG, PNG ou WEBP.', 'erro');
             return;
         }
         if (file.size > 2 * 1024 * 1024) {
-            apresentarNotificacao('Tamanho máximo: 2MB.', 'error');
+            apresentarNotificacao('Tamanho máximo: 2MB.', 'erro');
             return;
         }
         const reader = new FileReader();
@@ -133,7 +133,7 @@ function ProfileContent() {
             setPhotoPreview(ev.target?.result as string);
             // In production: upload to server, here we save as base64
             api.updateProfile({ fotoPerfil: ev.target?.result as string });
-            apresentarNotificacao('Foto atualizada!', 'success');
+            apresentarNotificacao('Foto atualizada!', 'sucesso');
         };
         reader.readAsDataURL(file);
     };

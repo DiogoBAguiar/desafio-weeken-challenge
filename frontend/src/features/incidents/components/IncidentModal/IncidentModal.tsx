@@ -184,7 +184,7 @@ export default function ModalRegistroIncidente({
                             Registrar Nova Ocorrência
                         </ComponenteDialogo.Title>
                         <ComponenteDialogo.Close asChild>
-                            <button className={estilosVisuais.closeBtn} aria-label="Abortar inclusão">
+                            <button className={estilosVisuais.closeBtn} aria-label="Abortar inclusão" title="Fechar modal">
                                 <IconeFechar size={24} />
                             </button>
                         </ComponenteDialogo.Close>
@@ -226,20 +226,20 @@ export default function ModalRegistroIncidente({
                                 </div>
 
                                 <div className={estilosVisuais.formGroup}>
-                                    <label>Categoria Específica *</label>
+                                    <label htmlFor="categorySelect">Categoria Específica *</label>
                                     <select
+                                        id="categorySelect"
                                         required
                                         value={formularioOcorrencia.categoriaEspecifica}
                                         onChange={(evento) => definirFormularioOcorrencia({ ...formularioOcorrencia, categoriaEspecifica: evento.target.value })}
-                                        className={estilosVisuais.input}
-                                        style={errosValidacao.categoria ? { borderColor: '#ef4444' } : {}}
+                                        className={`${estilosVisuais.input} ${errosValidacao.categoria ? estilosVisuais.inputError : ''}`}
                                     >
                                         <option value="">Selecione uma opção...</option>
                                         {(DicionarioCategorias.OPCOES[formularioOcorrencia.tipoSeveridade] || []).map((categoria) => (
                                             <option key={categoria.valor} value={categoria.valor}>{categoria.rotulo}</option>
                                         ))}
                                     </select>
-                                    {errosValidacao.categoria && <span style={{ color: '#ef4444', fontSize: 12 }}>{errosValidacao.categoria}</span>}
+                                    {errosValidacao.categoria && <span className={estilosVisuais.errorMessage}>{errosValidacao.categoria}</span>}
                                 </div>
 
                                 <div className={estilosVisuais.formGroup}>
@@ -302,7 +302,7 @@ export default function ModalRegistroIncidente({
                                             {previsualizacoesMidia.map((fonteImagem, indiceElemento) => (
                                                 <div key={indiceElemento} style={{ width: 80, height: 80, borderRadius: 8, overflow: 'hidden', position: 'relative', border: '1px solid var(--glass-border)' }}>
                                                     <img src={fonteImagem} alt="Pré-visualização do anexo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    <button type="button" onClick={() => excluirMidiaAnexada(indiceElemento)} style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', borderRadius: 4, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                                                    <button type="button" onClick={() => excluirMidiaAnexada(indiceElemento)} title="Remover mídia" style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', borderRadius: 4, width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
                                                         <IconeLixeira size={12} />
                                                     </button>
                                                 </div>

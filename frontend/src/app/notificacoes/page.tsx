@@ -39,7 +39,7 @@ export default function NotificacoesPage() {
                 setZonas(data);
             }
         } catch (err: any) {
-            apresentarNotificacao(err.message, 'error');
+            apresentarNotificacao(err.message, 'erro');
         } finally {
             setLoading(false);
         }
@@ -50,19 +50,19 @@ export default function NotificacoesPage() {
             await api.markAllRead();
             setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })));
             setNaoLidas(0);
-            apresentarNotificacao('Todas marcadas como lidas', 'success');
+            apresentarNotificacao('Todas marcadas como lidas', 'sucesso');
         } catch { }
     };
 
     const addZone = async () => {
         try {
             await api.createZone(newZone);
-            apresentarNotificacao('Zona de interesse criada!', 'success');
+            apresentarNotificacao('Zona de interesse criada!', 'sucesso');
             setShowAddZone(false);
             setNewZone({ nome: '', latitude: '-7.11532', longitude: '-34.86105', raio: '500' });
             loadData();
         } catch (err: any) {
-            apresentarNotificacao(err.message, 'error');
+            apresentarNotificacao(err.message, 'erro');
         }
     };
 
@@ -76,7 +76,7 @@ export default function NotificacoesPage() {
     const deleteZone = async (id: number) => {
         try {
             await api.deleteZone(id);
-            apresentarNotificacao('Zona removida', 'info');
+            apresentarNotificacao('Zona removida', 'informacao');
             loadData();
         } catch { }
     };
@@ -202,7 +202,7 @@ export default function NotificacoesPage() {
                                         onClick={() => {
                                             // CA11 (1.3.2): Navigate to map centered on zone
                                             router.push(`/?lat=${z.latitude}&lng=${z.longitude}&zoom=15`);
-                                            apresentarNotificacao(`Centralizado em "${z.nome}"`, 'info');
+                                            apresentarNotificacao(`Centralizado em "${z.nome}"`, 'informacao');
                                         }}
                                         title={`Clique para ver "${z.nome}" no mapa`}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -215,10 +215,12 @@ export default function NotificacoesPage() {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}
                                             onClick={(e) => e.stopPropagation()}>
                                             <button onClick={() => toggleZone(z.id)}
-                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: z.ativo ? 'var(--success-color)' : 'var(--text-secondary)' }}>
+                                                title={z.ativo ? 'Desativar zona' : 'Ativar zona'}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: z.ativo ? 'var(--sucesso-color)' : 'var(--text-secondary)' }}>
                                                 {z.ativo ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
                                             </button>
                                             <button onClick={() => deleteZone(z.id)}
+                                                title="Remover zona"
                                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--critical-color)' }}>
                                                 <Trash2 size={16} />
                                             </button>

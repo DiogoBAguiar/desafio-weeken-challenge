@@ -21,16 +21,16 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!email || !senha) {
-            apresentarNotificacao('Preencha todos os campos', 'error');
+            apresentarNotificacao('Preencha todos os campos', 'erro');
             return;
         }
         setLoading(true);
         try {
             await login(email, senha);
-            apresentarNotificacao('Login realizado com sucesso!', 'success');
+            apresentarNotificacao('Login realizado com sucesso!', 'sucesso');
             router.push('/');
         } catch (err: any) {
-            apresentarNotificacao(err.message || 'Erro ao fazer login', 'error');
+            apresentarNotificacao(err.message || 'Erro ao fazer login', 'erro');
         } finally {
             setLoading(false);
         }
@@ -41,10 +41,10 @@ export default function LoginPage() {
         try {
             const { default: api } = await import('@/shared/lib/api');
             await api.forgotPassword(forgotEmail);
-            apresentarNotificacao('Se o e-mail estiver cadastrado, você receberá as instruções.', 'info');
+            apresentarNotificacao('Se o e-mail estiver cadastrado, você receberá as instruções.', 'informacao');
             setShowForgot(false);
         } catch {
-            apresentarNotificacao('Erro ao processar recuperação.', 'error');
+            apresentarNotificacao('Erro ao processar recuperação.', 'erro');
         }
     };
 

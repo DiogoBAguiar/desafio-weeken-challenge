@@ -44,22 +44,22 @@ export default function RegisterPage() {
         e.preventDefault();
 
         if (form.senha !== form.confirmacaoSenha) {
-            apresentarNotificacao('As senhas não coincidem', 'error');
+            apresentarNotificacao('As senhas não coincidem', 'erro');
             return;
         }
 
         if (!form.aceitouTermos) {
-            apresentarNotificacao('Você deve aceitar os Termos de Uso e Política de Privacidade', 'error');
+            apresentarNotificacao('Você deve aceitar os Termos de Uso e Política de Privacidade', 'erro');
             return;
         }
 
         setLoading(true);
         try {
             await register(form);
-            apresentarNotificacao('Cadastro realizado com sucesso! Bem-vindo!', 'success');
+            apresentarNotificacao('Cadastro realizado com sucesso! Bem-vindo!', 'sucesso');
             router.push('/');
         } catch (err: any) {
-            apresentarNotificacao(err.message || 'Erro ao criar conta', 'error');
+            apresentarNotificacao(err.message || 'Erro ao criar conta', 'erro');
         } finally {
             setLoading(false);
         }

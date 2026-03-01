@@ -50,7 +50,7 @@ export default function AdminPage() {
             }
         } catch (err: any) {
             if (err.message.includes('permissão')) {
-                apresentarNotificacao('Sem permissão para acessar este recurso', 'error');
+                apresentarNotificacao('Sem permissão para acessar este recurso', 'erro');
             }
         } finally {
             setLoading(false);
@@ -59,16 +59,16 @@ export default function AdminPage() {
 
     const handleModeration = async (incidenteId: number, acao: string) => {
         if (justificativa.length < 30) {
-            apresentarNotificacao('A justificativa deve ter no mínimo 30 caracteres', 'error');
+            apresentarNotificacao('A justificativa deve ter no mínimo 30 caracteres', 'erro');
             return;
         }
         try {
             await api.moderateAction(incidenteId, acao, justificativa);
-            apresentarNotificacao(`Ação "${acao}" realizada com sucesso`, 'success');
+            apresentarNotificacao(`Ação "${acao}" realizada com sucesso`, 'sucesso');
             setJustificativa('');
             loadData();
         } catch (err: any) {
-            apresentarNotificacao(err.message, 'error');
+            apresentarNotificacao(err.message, 'erro');
         }
     };
 
@@ -78,10 +78,10 @@ export default function AdminPage() {
 
         try {
             await api.changeUserRole(userId, role, senhaConfirmacao);
-            apresentarNotificacao('Perfil alterado com sucesso', 'success');
+            apresentarNotificacao('Perfil alterado com sucesso', 'sucesso');
             loadData();
         } catch (err: any) {
-            apresentarNotificacao(err.message, 'error');
+            apresentarNotificacao(err.message, 'erro');
         }
     };
 
@@ -94,7 +94,7 @@ export default function AdminPage() {
                 const a = document.createElement('a');
                 a.href = url; a.download = 'dados_seguranca.json'; a.click();
             }
-            apresentarNotificacao('Dados exportados!', 'success');
+            apresentarNotificacao('Dados exportados!', 'sucesso');
         } catch { }
     };
 
@@ -380,7 +380,7 @@ export default function AdminPage() {
                                                     <button onClick={() => {
                                                         const motivo = prompt('Motivo do banimento (mín 30 caracteres):');
                                                         if (motivo && motivo.length >= 30) {
-                                                            api.banUser(u.id, motivo, false).then(() => { apresentarNotificacao('Usuário banido', 'success'); loadData(); }).catch((e: any) => apresentarNotificacao(e.message, 'error'));
+                                                            api.banUser(u.id, motivo, false).then(() => { apresentarNotificacao('Usuário banido', 'sucesso'); loadData(); }).catch((e: any) => apresentarNotificacao(e.message, 'erro'));
                                                         }
                                                     }}
                                                         style={{ padding: '4px 10px', borderRadius: 6, background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontSize: 11, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
