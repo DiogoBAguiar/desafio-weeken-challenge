@@ -6,7 +6,13 @@ import {
     MapPin as IconeMapa,
     Camera as IconeCamera,
     AlertTriangle as IconeAlerta,
-    Trash2 as IconeLixeira
+    Trash2 as IconeLixeira,
+    Siren as IconeSirene,
+    ShieldAlert as IconeEscudo,
+    HardHat as IconeCapacete,
+    Info as IconeInfo,
+    CalendarDays as IconeCalendario,
+    Clock as IconeTempo
 } from 'lucide-react';
 import * as ComponenteDialogo from '@radix-ui/react-dialog';
 import estilosVisuais from './IncidentModal.module.css';
@@ -30,6 +36,8 @@ interface DadosOcorrencia {
     descricaoDetalhada: string;
     latitude: number;
     longitude: number;
+    horaInicio?: string;
+    horaFim?: string;
 }
 
 // ============================================================================
@@ -57,8 +65,11 @@ export default function ModalRegistroIncidente({
         descricaoDetalhada: '',
         latitude: 0,
         longitude: 0,
+        horaInicio: '',
+        horaFim: ''
     });
 
+    const [temHorario, definirTemHorario] = useState<boolean>(false);
     const [arquivosMidia, definirArquivosMidia] = useState<File[]>([]);
     const [previsualizacoesMidia, definirPrevisualizacoesMidia] = useState<string[]>([]);
     const [errosValidacao, definirErrosValidacao] = useState<Record<string, string>>({});
@@ -122,13 +133,17 @@ export default function ModalRegistroIncidente({
             lat: formularioOcorrencia.latitude,
             lng: formularioOcorrencia.longitude,
             time: new Date().toISOString(),
+            dataEvento: new Date().toISOString(),
             author: 'Usuário Local',
             veracity: 1,
+            horaInicio: temHorario ? formularioOcorrencia.horaInicio : undefined,
+            horaFim: temHorario ? formularioOcorrencia.horaFim : undefined,
         });
 
         // Restauração de Estados
         definirEtapaAtualFluxo(1);
-        definirFormularioOcorrencia({ tipoSeveridade: 'WARNING', categoriaEspecifica: '', descricaoDetalhada: '', latitude: 0, longitude: 0 });
+        definirFormularioOcorrencia({ tipoSeveridade: 'WARNING', categoriaEspecifica: '', descricaoDetalhada: '', latitude: 0, longitude: 0, horaInicio: '', horaFim: '' });
+        definirTemHorario(false);
         definirArquivosMidia([]);
         definirPrevisualizacoesMidia([]);
         definirErrosValidacao({});
@@ -210,19 +225,25 @@ export default function ModalRegistroIncidente({
 
                                 <div className={estilosVisuais.typeSelector}>
                                     {[
-                                        { chave: 'CRITICAL', rotulo: 'Crime Violento', subRotulo: 'Assalto, Agressão', estiloClass: 'activeCritical' },
-                                        { chave: 'WARNING', rotulo: 'Furto / Risco', subRotulo: 'Furto, Acidente', estiloClass: 'activeWarning' },
-                                        { chave: 'INFRASTRUCTURE', rotulo: 'Zeladoria', subRotulo: 'Falta de Luz, Buracos', estiloClass: 'activeWarning' },
-                                        { chave: 'INFO', rotulo: 'Utilidade Pública', subRotulo: 'Bloqueio, Animais', estiloClass: 'activeEvent' },
-                                        { chave: 'EVENT', rotulo: 'Evento Social', subRotulo: 'Feira, Mutirão', estiloClass: 'activeEvent' },
-                                    ].map((opcao) => (
-                                        <label key={opcao.chave} className={`${estilosVisuais.typeCard} ${formularioOcorrencia.tipoSeveridade === opcao.chave ? estilosVisuais[opcao.estiloClass] : ''}`}>
-                                            <input type="radio" name="tipoSeveridade" value={opcao.chave} checked={formularioOcorrencia.tipoSeveridade === opcao.chave} onChange={(e) => definirFormularioOcorrencia({ ...formularioOcorrencia, tipoSeveridade: e.target.value, categoriaEspecifica: '' })} style={{ display: 'none' }} />
-                                            <IconeAlerta size={22} />
-                                            <span style={{ color: "var(--text-primary)" }}>{opcao.rotulo}</span>
-                                            <small>{opcao.subRotulo}</small>
-                                        </label>
-                                    ))}
+                                        { chave: 'CRITICAL', rotulo: 'Crime Violento', subRotulo: 'Assalto, Agressão', estiloClass: 'activeCritical', icone: IconeEscudo },
+                                        { chave: 'WARNING', rotulo: 'Furto / Risco', subRotulo: 'Furto, Acidente', estiloClass: 'activeWarning', icone: IconeSirene },
+                                        { chave: 'INFRASTRUCTURE', rotulo: 'Zeladoria', subRotulo: 'Falta de Luz, Buracos', estiloClass: 'activeWarning', icone: IconeCapacete },
+                                        { chave: 'INFO', rotulo: 'Utilidade Pública', subRotulo: 'Bloqueio, Animais', estiloClass: 'activeEvent', icone: IconeInfo },
+                                        { chave: 'EVENT', rotulo: 'Evento Social', subRotulo: 'Feira, Mutirão', estiloClass: 'activeEvent', icone: IconeCalendario },
+                                    ].map((opcao) => {
+                                        const IconeElegido = opcao.icone;
+                                        return (
+                                            <label key={opcao.chave} className={`${estilosVisuais.typeCard} ${formularioOcorrencia.tipoSeveridade === opcao.chave ? estilosVisuais[opcao.estiloClass] : ''}`}>
+                                                <input type="radio" name="tipoSeveridade" value={opcao.chave} checked={formularioOcorrencia.tipoSeveridade === opcao.chave} onChange={(e) => {
+                                                    definirFormularioOcorrencia({ ...formularioOcorrencia, tipoSeveridade: e.target.value, categoriaEspecifica: '' });
+                                                    if (e.target.value === 'EVENT') definirTemHorario(true);
+                                                }} style={{ display: 'none' }} />
+                                                <IconeElegido size={22} />
+                                                <span style={{ color: "var(--text-primary)" }}>{opcao.rotulo}</span>
+                                                <small>{opcao.subRotulo}</small>
+                                            </label>
+                                        )
+                                    })}
                                 </div>
 
                                 <div className={estilosVisuais.formGroup}>
@@ -261,6 +282,25 @@ export default function ModalRegistroIncidente({
                                         </span>
                                     )}
                                 </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                                    <input type="checkbox" id="temHorario" checked={temHorario} onChange={(e) => definirTemHorario(e.target.checked)} />
+                                    <label htmlFor="temHorario" style={{ color: 'var(--text-primary)', fontSize: 13, userSelect: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <IconeTempo size={14} color="var(--primary-color)" /> Definir horário de início e término ({formularioOcorrencia.tipoSeveridade === 'EVENT' ? 'Recomendado' : 'Opcional'})
+                                    </label>
+                                </div>
+                                {temHorario && (
+                                    <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                                        <div className={estilosVisuais.formGroup} style={{ flex: 1 }}>
+                                            <label style={{ fontSize: 13 }}>Hora Início</label>
+                                            <input type="time" className={estilosVisuais.input} value={formularioOcorrencia.horaInicio} onChange={(e) => definirFormularioOcorrencia({ ...formularioOcorrencia, horaInicio: e.target.value })} />
+                                        </div>
+                                        <div className={estilosVisuais.formGroup} style={{ flex: 1 }}>
+                                            <label style={{ fontSize: 13 }}>Hora Fim</label>
+                                            <input type="time" className={estilosVisuais.input} value={formularioOcorrencia.horaFim} onChange={(e) => definirFormularioOcorrencia({ ...formularioOcorrencia, horaFim: e.target.value })} />
+                                        </div>
+                                    </div>
+                                )}
 
                                 <button type="button" className={estilosVisuais.primaryBtn} onClick={avancarParaProximaEtapa}>
                                     Prosseguir
