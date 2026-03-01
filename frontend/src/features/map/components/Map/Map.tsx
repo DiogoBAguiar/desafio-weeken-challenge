@@ -33,7 +33,8 @@ import {
     useHeatmapData as usarDadosMapaCalor,
     useVoteIncident as usarVotoIncidente,
     useReportIncident as usarDenunciaIncidente,
-    useCreateIncident as usarCriacaoIncidente
+    useCreateIncident as usarCriacaoIncidente,
+    useCreateEvento as usarCriacaoEvento
 } from "@/features/map/api/useMapData";
 
 // ============================================================================
@@ -237,6 +238,7 @@ export default function MapaInterativoAplicacao(): ReactElement {
     const mutacaoVoto = usarVotoIncidente();
     const mutacaoDenuncia = usarDenunciaIncidente();
     const mutacaoCriacao = usarCriacaoIncidente();
+    const mutacaoCriacaoEvento = usarCriacaoEvento();
 
     const listaIncidentes = incidentesBrutos || [];
     const listaEventos = listaIncidentes.filter((item: any) => (item.tipo || item.type) === "EVENT");
@@ -333,17 +335,36 @@ export default function MapaInterativoAplicacao(): ReactElement {
     };
 
     const submeterNovoIncidente = async (dadosFormulario: any) => {
-        mutacaoCriacao.mutate({
-            titulo: dadosFormulario.category || "Novo Registro",
-            descricao: dadosFormulario.description,
-            categoria: dadosFormulario.category,
-            tipo: dadosFormulario.type,
-            latitude: dadosFormulario.lat,
-            longitude: dadosFormulario.lng,
-        }, {
-            onSuccess: (respostaServidor: any) => apresentarNotificacao(respostaServidor.mensagem || "Incidente protocolado", "sucesso"),
-            onError: (erroRequisicao: any) => apresentarNotificacao(erroRequisicao.message, "erro")
-        });
+        if (dadosFormulario.type === 'EVENT') {
+            mutacaoCriacaoEvento.mutate({
+                titulo: dadosFormulario.category || "Novo Evento",
+                descricao: dadosFormulario.description,
+                categoriaEvento: dadosFormulario.category,
+                latitude: dadosFormulario.lat,
+                longitude: dadosFormulario.lng,
+                dataEvento: dadosFormulario.dataEvento || new Date().toISOString(),
+                horaInicio: dadosFormulario.horaInicio || "06:00",
+                horaFim: dadosFormulario.horaFim || "18:00",
+                necessitaVoluntarios: false,
+                capacidadeMax: null,
+                linkExterno: null
+            }, {
+                onSuccess: (respostaServidor: any) => apresentarNotificacao(respostaServidor.mensagem || "Ação Social cadastrada", "sucesso"),
+                onError: (erroRequisicao: any) => apresentarNotificacao(erroRequisicao.message, "erro")
+            });
+        } else {
+            mutacaoCriacao.mutate({
+                titulo: dadosFormulario.category || "Novo Registro",
+                descricao: dadosFormulario.description,
+                categoria: dadosFormulario.category,
+                tipo: dadosFormulario.type,
+                latitude: dadosFormulario.lat,
+                longitude: dadosFormulario.lng,
+            }, {
+                onSuccess: (respostaServidor: any) => apresentarNotificacao(respostaServidor.mensagem || "Incidente protocolado", "sucesso"),
+                onError: (erroRequisicao: any) => apresentarNotificacao(erroRequisicao.message, "erro")
+            });
+        }
     };
 
     const computarValidacaoIncidente = (identificadorIncidente: number, tipoVoto: string) => {
